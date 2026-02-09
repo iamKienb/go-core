@@ -9,8 +9,9 @@ import (
 )
 
 func NewRedisClient(cfg Config) (*redis.Client, error) {
+	address := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.Address,
+		Addr:     address,
 		Password: cfg.Password,
 		Username: cfg.Username,
 		DB:       cfg.Database,

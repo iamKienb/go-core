@@ -1,7 +1,8 @@
 package redis
 
 type Config struct {
-	Address  string
+	Host     string
+	Port     int
 	Username string
 	Password string
 	Database int
