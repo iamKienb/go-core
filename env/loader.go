@@ -3,6 +3,7 @@ package env
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -13,6 +14,15 @@ func Load() {
 	}
 }
 
-func Get(key string) string {
+func GetString(key string) string {
 	return os.Getenv(key)
+}
+
+func GetInt(key string) int {
+	v := os.Getenv(key)
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		log.Fatalf("invalid env %s=%s", key, v)
+	}
+	return i
 }
