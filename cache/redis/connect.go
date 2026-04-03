@@ -5,10 +5,15 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/iamKienb/shopify-go-platform/config"
 	"github.com/redis/go-redis/v9"
 )
 
-func NewRedisClient(cfg Config) (*redis.Client, error) {
+type Client struct {
+	redis *redis.Client
+}
+
+func New(cfg config.RedisConfig) (*Client, error) {
 	address := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     address,
@@ -24,6 +29,12 @@ func NewRedisClient(cfg Config) (*redis.Client, error) {
 	}
 	fmt.Println("Redis cluster connected:", pong)
 
-	return rdb, nil
+	return &Client{
+		redis: rdb,
+	}, nil
 
+}
+
+func (c *Client) Close() {
+	c.redis.Close()
 }
