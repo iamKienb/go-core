@@ -48,3 +48,7 @@ func New(cfg config.PostgresConfig) (*Client, error) {
 func (c *Client) Close() {
 	c.pool.Close()
 }
+
+func (c *Client) GetPool() *pgxpool.Pool {
+	return c.pool
+}
