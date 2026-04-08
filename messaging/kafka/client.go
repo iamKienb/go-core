@@ -18,4 +18,6 @@ func New(brokers []string) *Client {
 	}
 }
 
-func (c *Client) GetWriter(topic string) *kafka.Writer
+// func (c *Client) GetWriter(topic string) *kafka.Writer {
+// 	return &kafka.Writer{}
+// }
