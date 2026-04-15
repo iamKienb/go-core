@@ -1,80 +1,48 @@
 package config
 
 import (
-	"log"
-	"os"
-	"strconv"
 	"time"
 )
 
 type PostgresConfig struct {
-	Host            string
-	Port            int
-	Username        string
-	Password        string
-	Db              string
-	MaxIdleConns    int32
-	MaxOpenConns    int32
-	ConnMaxLifetime time.Duration
+	Host            string        `env:"USER_COMMAND_SERVICE_DB_HOST"`
+	Port            int           `env:"USER_COMMAND_SERVICE_DB_PORT"`
+	Username        string        `env:"USER_COMMAND_SERVICE_DB_USERNAME"`
+	Password        string        `env:"USER_COMMAND_SERVICE_DB_PASSWORD"`
+	Db              string        `env:"USER_COMMAND_SERVICE_DB_NAME"`
+	MaxIdleConns    int           `env:"USER_COMMAND_SERVICE_DB_MAX_IDLE_CONNS"`
+	MaxOpenConns    int           `env:"USER_COMMAND_SERVICE_DB_MAX_OPEN_CONNS"`
+	ConnMaxLifetime time.Duration `env:"USER_COMMAND_SERVICE_DB_CONN_MAX_LIFETIME"`
 }
 
 type RedisConfig struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database int
-	PoolSize int
+	Host     string `env:"USER_COMMAND_SERVICE_REDIS_HOST"`
+	Port     int    `env:"USER_COMMAND_SERVICE_REDIS_PORT"`
+	Username string `env:"USER_COMMAND_SERVICE_REDIS_USERNAME"`
+	Password string `env:"USER_COMMAND_SERVICE_REDIS_PASSWORD"`
+	Db       int    `env:"USER_COMMAND_SERVICE_REDIS_DB"`
+	PoolSize int    `env:"USER_COMMAND_SERVICE_REDIS_POOL_SIZE"`
 }
 
 type JwtConfig struct {
-	accessSecret  string
-	refreshSecret string
-	accessExpiry  time.Duration
-	refreshExpiry time.Duration
-}
-
-type Server struct {
-	Port int
+	AccessSecret  string        `env:"USER_COMMAND_SERVICE_ACCESS_SECRET"`
+	RefreshSecret string        `env:"USER_COMMAND_SERVICE_REFRESH_SECRET"`
+	AccessExpiry  time.Duration `env:"USER_COMMAND_SERVICE_ACCESS_EXPIRY"`
+	RefreshExpiry time.Duration `env:"USER_COMMAND_SERVICE_REFRESH_EXPIRY"`
 }
 
 type Argon2Config struct {
-	memory      uint32
-	iterations  uint32
-	parallelism uint8
-	saltLength  int
-	keyLength   uint32
+	Memory      uint32 `env:"USER_COMMAND_SERVICE_ARGON2_MEMORY"`
+	Iterations  uint32 `env:"USER_COMMAND_SERVICE_ARGON2_ITERATIONS"`
+	Parallelism uint8  `env:"USER_COMMAND_SERVICE_ARGON2_PARALLELISM"`
+	SaltLength  int    `env:"USER_COMMAND_SERVICE_ARGON2_SALT_LENGTH"`
+	KeyLength   uint32 `env:"USER_COMMAND_SERVICE_ARGON2_KEY_LENGTH"`
 }
 
 type KafkaConfig struct {
-	Brokers  []string
-	ClientID string
+	Brokers  []string `env:"USER_COMMAND_SERVICE_KAFKA_BROKERS" envSeparator:","`
+	ClientID string   `env:"USER_COMMAND_SERVICE_KAFKA_CLIENT_ID"`
 }
-
-func GetEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
-}
-
-func GetEnvInt(key string) int {
-	v := os.Getenv(key)
-	i, err := strconv.Atoi(v)
-	if err != nil {
-		log.Fatalf("invalid env %s=%s", key, v)
-	}
-	return i
-}
-
-func GetEnvDuration(key string, fallback time.Duration) time.Duration {
-	s := GetEnv(key, "")
-	if s == "" {
-		return fallback
-	}
-	d, err := time.ParseDuration(s)
-	if err != nil {
-		return fallback
-	}
-	return d
+type Server struct {
+	GrpcPort int `env:"USER_COMMAND_SERVICE_GRPC_PORT"`
 }

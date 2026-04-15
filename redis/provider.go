@@ -21,7 +21,7 @@ func New(cfg config.RedisConfig) (*Client, error) {
 		Addr:         addr,
 		Username:     cfg.Username,
 		Password:     cfg.Password,
-		DB:           cfg.Database,
+		DB:           cfg.Db,
 		PoolSize:     cfg.PoolSize,
 		MinIdleConns: 10,
 	})
