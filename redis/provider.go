@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/iamKienb/shopify-go-platform/config"
+	configx "github.com/iamKienb/shopify-go-platform/config"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -14,7 +14,7 @@ type Client struct {
 	Conn *redis.Client
 }
 
-func New(cfg config.RedisConfig) (*Client, error) {
+func New(cfg configx.RedisConfig) (*Client, error) {
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
 	rdb := redis.NewClient(&redis.Options{

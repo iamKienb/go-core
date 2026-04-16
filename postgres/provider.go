@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/iamKienb/shopify-go-platform/config"
+	configx "github.com/iamKienb/shopify-go-platform/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -14,7 +14,7 @@ type Client struct {
 	Pool *pgxpool.Pool
 }
 
-func New(cfg config.PostgresConfig) (*Client, error) {
+func New(cfg configx.PostgresConfig) (*Client, error) {
 	dsn := fmt.Sprintf(
 		"postgresql://%s:%s@%s:%d/%s?sslmode=disable",
 		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Db,

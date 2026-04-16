@@ -1,10 +1,10 @@
-package config
+package configx
 
 import (
 	"fmt"
 	"log"
 
-	"github.com/caarlos0/env"
+	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
 )
 
