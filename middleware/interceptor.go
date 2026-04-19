@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	app_error "github.com/iamKienb/shopify-go-platform/error"
+	app_error "github.com/iamKienb/shopify-go-platform/app_error"
 )
 
 func ErrorResponseInterceptor() connect.UnaryInterceptorFunc {

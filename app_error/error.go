@@ -23,14 +23,6 @@ type AppError struct {
 	Err     error
 }
 
-func Transform(kind Kind, msg string, err error) *AppError {
-	return &AppError{
-		Kind:    kind,
-		Message: msg,
-		Err:     err,
-	}
-}
-
 func (e *AppError) Error() string {
 	if e.Err != nil {
 		return e.Message + ": " + e.Err.Error()
@@ -39,6 +31,14 @@ func (e *AppError) Error() string {
 }
 
 func (e *AppError) Unwrap() error { return e.Err }
+
+func Transform(kind Kind, msg string, err error) *AppError {
+	return &AppError{
+		Kind:    kind,
+		Message: msg,
+		Err:     err,
+	}
+}
 
 func (k Kind) ConnectCode() connect.Code {
 	return map[Kind]connect.Code{
