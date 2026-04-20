@@ -28,7 +28,7 @@ func (s *RedisService) Set(ctx context.Context, key string, value any, ttl time.
 func (s *RedisService) Get(ctx context.Context, key string, dest any) error {
 	val, err := s.client.Get(ctx, key).Result()
 	if errors.Is(err, redis.Nil) {
-		return errors.New("key not found")
+		return redis.Nil
 	}
 	if err != nil {
 		return err
