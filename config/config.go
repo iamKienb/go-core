@@ -5,14 +5,14 @@ import (
 )
 
 type PostgresConfig struct {
-	Host            string        `env:"_DB_HOST"`
-	Port            int           `env:"_DB_PORT"`
-	Username        string        `env:"_DB_USERNAME"`
-	Password        string        `env:"_DB_PASSWORD"`
-	Db              string        `env:"_DB_NAME"`
-	MaxIdleConns    int           `env:"_DB_MAX_IDLE_CONNS"`
-	MaxOpenConns    int           `env:"_DB_MAX_OPEN_CONNS"`
-	ConnMaxLifetime time.Duration `env:"_DB_CONN_MAX_LIFETIME"`
+	Host            string        `env:"_PG_HOST"`
+	Port            int           `env:"_PG_PORT"`
+	Username        string        `env:"_PG_USERNAME"`
+	Password        string        `env:"_PG_PASSWORD"`
+	Db              string        `env:"_PG_NAME"`
+	MaxIdleConns    int           `env:"_PG_MAX_IDLE_CONNS"`
+	MaxOpenConns    int           `env:"_PG_MAX_OPEN_CONNS"`
+	ConnMaxLifetime time.Duration `env:"_PG_CONN_MAX_LIFETIME"`
 }
 
 type RedisConfig struct {
@@ -25,8 +25,8 @@ type RedisConfig struct {
 }
 
 type JwtConfig struct {
-	AccessSecret  string        `env:"_ACCESS_SECRET"`
-	RefreshSecret string        `env:"_REFRESH_SECRET"`
+	PrivateKey    string        `env:"_PRIVATE_KEY"`
+	PublicKey     string        `env:"_PUBLIC_KEY"`
 	AccessExpiry  time.Duration `env:"_ACCESS_EXPIRY"`
 	RefreshExpiry time.Duration `env:"_REFRESH_EXPIRY"`
 }
@@ -43,6 +43,16 @@ type KafkaConfig struct {
 	Brokers  []string `env:"_KAFKA_BROKERS" envSeparator:","`
 	ClientID string   `env:"_KAFKA_CLIENT_ID"`
 }
+
+type CircuitBreakerConfig struct {
+	Name         string        `env:"_BREAKER_NAME"`
+	MaxRequests  uint32        `env:"_BREAKER_MAX_REQUESTS"`
+	Interval     time.Duration `env:"_BREAKER_INTERVAL"`
+	Timeout      time.Duration `env:"_BREAKER_TIMEOUT"`
+	FailureRatio float64       `env:"_BREAKER_FAILURE_RATIO"`
+	ThresholdCnt uint32        `env:"_BREAKER_THRESHOLD_CNT"`
+}
+
 type Server struct {
 	GrpcPort int `env:"_GRPC_PORT"`
 }

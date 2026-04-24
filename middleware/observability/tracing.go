@@ -5,7 +5,7 @@ import (
 	"connectrpc.com/otelconnect"
 )
 
-func NewTracingInterceptor() (connect.Interceptor, error) {
+func TracingInterceptor() (connect.Interceptor, error) {
 	return otelconnect.NewInterceptor(
 		otelconnect.WithTrustRemote(),
 	)
