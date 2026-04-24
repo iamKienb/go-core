@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/iamKienb/shopify-go-platform/middleware/auth"
 	"github.com/iamKienb/shopify-go-platform/utils"
 )
 
@@ -16,31 +17,32 @@ func LoggingInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
 
 			resp, err := next(ctx, req)
 
-			level := slog.LevelInfo
+			duration := time.Since(start)
 			code := connect.CodeOf(err)
 
+			level := slog.LevelInfo
 			if err != nil {
-				if code >= connect.CodeUnknown {
+				if code == connect.CodeInternal || code == connect.CodeUnknown || code == connect.CodeUnavailable {
 					level = slog.LevelError
 				} else {
 					level = slog.LevelWarn
 				}
 			}
 
-			traceID := utils.ExtractTraceID(ctx)
-			attrs := []slog.Attr{
-				slog.String("trace_id", traceID),
-				slog.String("procedure", req.Spec().Procedure),
+			attrs := []any{
+				slog.String("req_id", auth.GetRequestID(ctx)),
+				slog.String("trace_id", utils.ExtractTraceID(ctx)),
+				slog.String("method", req.Spec().Procedure),
 				slog.String("status", code.String()),
-				slog.Duration("duration", time.Since(start)),
-				slog.String("protocol", req.Peer().Protocol),
+				slog.Duration("latency", duration),
+				slog.String("ip", req.Peer().Addr),
 			}
 
 			if err != nil {
-				attrs = append(attrs, slog.Any("error.detail", err))
+				attrs = append(attrs, slog.String("error", err.Error()))
 			}
 
-			logger.LogAttrs(ctx, level, "GRPC_REQUEST_COMPLETED", attrs...)
+			logger.Log(ctx, level, "gRPC Request Completed", attrs...)
 
 			return resp, err
 		}
