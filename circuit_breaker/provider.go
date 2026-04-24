@@ -1,4 +1,4 @@
-package circuit_breaker
+package cb
 
 import (
 	"errors"
