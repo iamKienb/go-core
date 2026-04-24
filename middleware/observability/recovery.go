@@ -1,4 +1,4 @@
-package observability
+package observabilityx
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 
 	"connectrpc.com/connect"
-	"github.com/iamKienb/shopify-go-platform/middleware/auth"
+	authx "github.com/iamKienb/shopify-go-platform/middleware/auth"
 	"github.com/iamKienb/shopify-go-platform/utils"
 )
 
@@ -16,7 +16,7 @@ func RecoveryInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (_ connect.AnyResponse, err error) {
 			defer func() {
 				if r := recover(); r != nil {
-					reqID := auth.GetRequestID(ctx)
+					reqID := authx.GetRequestID(ctx)
 					traceID := utils.ExtractTraceID(ctx)
 
 					logger.ErrorContext(ctx, "CRITICAL_PANIC_RECOVERED",

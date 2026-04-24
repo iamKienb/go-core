@@ -1,4 +1,4 @@
-package observability
+package observabilityx
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/iamKienb/shopify-go-platform/middleware/auth"
+	authx "github.com/iamKienb/shopify-go-platform/middleware/auth"
 	"github.com/iamKienb/shopify-go-platform/utils"
 )
 
@@ -30,7 +30,7 @@ func LoggingInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
 			}
 
 			attrs := []any{
-				slog.String("req_id", auth.GetRequestID(ctx)),
+				slog.String("req_id", authx.GetRequestID(ctx)),
 				slog.String("trace_id", utils.ExtractTraceID(ctx)),
 				slog.String("method", req.Spec().Procedure),
 				slog.String("status", code.String()),

@@ -1,4 +1,4 @@
-package cb
+package cbx
 
 import (
 	"sync"
@@ -33,10 +33,7 @@ func (m *Manager) Get(name string) *CircuitBreaker {
 		return breaker
 	}
 
-	newCfg := m.cfg
-	newCfg.Name = name
-
-	newBreaker := NewCircuitBreaker(newCfg)
+	newBreaker := NewCircuitBreaker(name, m.cfg)
 	m.breakers[name] = newBreaker
 
 	return newBreaker

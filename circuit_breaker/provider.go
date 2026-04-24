@@ -1,4 +1,4 @@
-package cb
+package cbx
 
 import (
 	"errors"
@@ -12,9 +12,9 @@ type CircuitBreaker struct {
 	cb *gobreaker.CircuitBreaker
 }
 
-func NewCircuitBreaker(cfg configx.CircuitBreakerConfig) *CircuitBreaker {
+func NewCircuitBreaker(name string, cfg configx.CircuitBreakerConfig) *CircuitBreaker {
 	settings := gobreaker.Settings{
-		Name:        cfg.Name,
+		Name:        name,
 		MaxRequests: cfg.MaxRequests,
 		Interval:    cfg.Interval,
 		Timeout:     cfg.Timeout,

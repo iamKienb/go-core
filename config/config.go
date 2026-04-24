@@ -45,7 +45,6 @@ type KafkaConfig struct {
 }
 
 type CircuitBreakerConfig struct {
-	Name         string        `env:"_BREAKER_NAME"`
 	MaxRequests  uint32        `env:"_BREAKER_MAX_REQUESTS"`
 	Interval     time.Duration `env:"_BREAKER_INTERVAL"`
 	Timeout      time.Duration `env:"_BREAKER_TIMEOUT"`
