@@ -32,12 +32,12 @@ func (g *JWTGenerator) GeneratePair(claims TokenClaims) (*TokenPair, error) {
 	accessExpAt := now.Add(g.cfg.AccessExpiry)
 	refreshExpAt := now.Add(g.cfg.RefreshExpiry)
 
-	accessToken, err := g.sign(claims, accessExpAt, g.cfg.PrivateKey)
+	accessToken, err := g.Sign(claims, accessExpAt, g.cfg.PrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("jwt: sign access token: %w", err)
 	}
 
-	refreshToken, err := g.sign(claims, refreshExpAt, g.cfg.PrivateKey)
+	refreshToken, err := g.Sign(claims, refreshExpAt, g.cfg.PrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("jwt: sign refresh token: %w", err)
 	}
@@ -50,7 +50,7 @@ func (g *JWTGenerator) GeneratePair(claims TokenClaims) (*TokenPair, error) {
 	}, nil
 }
 
-func (g *JWTGenerator) sign(claims TokenClaims, expiryAt time.Time, secretKey string) (string, error) {
+func (g *JWTGenerator) Sign(claims TokenClaims, expiryAt time.Time, secretKey string) (string, error) {
 	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(secretKey))
 	if err != nil {
 		return "", fmt.Errorf("invalid private key: %w", err)

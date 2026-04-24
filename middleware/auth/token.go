@@ -25,6 +25,7 @@ type TokenPair struct {
 
 type TokenGenerator interface {
 	GeneratePair(claims TokenClaims) (*TokenPair, error)
+	Verify(tokenString string) (*TokenClaims, error)
 }
 
 func GetUserInfoFromCtx(ctx context.Context) *TokenClaims {
