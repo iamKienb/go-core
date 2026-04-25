@@ -2,21 +2,21 @@ package authx
 
 import "time"
 
-type TokenClaims struct {
+type Claims struct {
 	UserId          string
 	Email           string
 	Roles           []string
 	PasswordVersion int
 }
 
-type TokenPair struct {
+type Pair struct {
 	AccessToken           string
 	RefreshToken          string
 	AccessTokenExpiresAt  time.Time
 	RefreshTokenExpiresAt time.Time
 }
 
-type TokenGenerator interface {
-	GeneratePair(claims TokenClaims) (*TokenPair, error)
-	Verify(tokenString string) (*TokenClaims, error)
+type Generator interface {
+	GeneratePair(claims Claims) (*Pair, error)
+	Verify(tokenString string) (*Claims, error)
 }

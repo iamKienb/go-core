@@ -21,13 +21,13 @@ type JWTGenerator struct {
 	cfg configx.JwtConfig
 }
 
-func NewJWTGenerator(cfg configx.JwtConfig) TokenGenerator {
+func NewJWTGenerator(cfg configx.JwtConfig) Generator {
 	return &JWTGenerator{
 		cfg: cfg,
 	}
 }
 
-func (g *JWTGenerator) GeneratePair(claims TokenClaims) (*TokenPair, error) {
+func (g *JWTGenerator) GeneratePair(claims Claims) (*Pair, error) {
 	now := time.Now().UTC()
 	accessExpAt := now.Add(g.cfg.AccessExpiry)
 	refreshExpAt := now.Add(g.cfg.RefreshExpiry)
@@ -42,7 +42,7 @@ func (g *JWTGenerator) GeneratePair(claims TokenClaims) (*TokenPair, error) {
 		return nil, fmt.Errorf("jwt: sign refresh token: %w", err)
 	}
 
-	return &TokenPair{
+	return &Pair{
 		AccessToken:           accessToken,
 		RefreshToken:          refreshToken,
 		AccessTokenExpiresAt:  accessExpAt,
@@ -50,7 +50,7 @@ func (g *JWTGenerator) GeneratePair(claims TokenClaims) (*TokenPair, error) {
 	}, nil
 }
 
-func (g *JWTGenerator) Sign(claims TokenClaims, expiryAt time.Time, secretKey string) (string, error) {
+func (g *JWTGenerator) Sign(claims Claims, expiryAt time.Time, secretKey string) (string, error) {
 	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(secretKey))
 	if err != nil {
 		return "", fmt.Errorf("invalid private key: %w", err)
@@ -76,7 +76,7 @@ func (g *JWTGenerator) Sign(claims TokenClaims, expiryAt time.Time, secretKey st
 	return token, nil
 }
 
-func (g *JWTGenerator) Verify(tokenString string) (*TokenClaims, error) {
+func (g *JWTGenerator) Verify(tokenString string) (*Claims, error) {
 	key, err := jwt.ParseRSAPublicKeyFromPEM([]byte(g.cfg.PublicKey))
 	if err != nil {
 		return nil, fmt.Errorf("jwt: invalid public key: %w", err)
@@ -96,7 +96,7 @@ func (g *JWTGenerator) Verify(tokenString string) (*TokenClaims, error) {
 	}
 
 	if claims, ok := token.Claims.(*jwtClaims); ok && token.Valid {
-		return &TokenClaims{
+		return &Claims{
 			UserId:          claims.UserID,
 			Email:           claims.Email,
 			Roles:           claims.Roles,

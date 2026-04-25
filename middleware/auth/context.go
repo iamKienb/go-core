@@ -14,8 +14,8 @@ const (
 	requestIDHeaderKey = "request_id"
 )
 
-func GetUserInfoFromCtx(ctx context.Context) *TokenClaims {
-	if claims, ok := ctx.Value(userHeaderKey).(*TokenClaims); ok {
+func GetUserInfoFromCtx(ctx context.Context) *Claims {
+	if claims, ok := ctx.Value(userHeaderKey).(*Claims); ok {
 		return claims
 	}
 
@@ -30,7 +30,7 @@ func GetRequestID(ctx context.Context) string {
 	return ""
 }
 
-func SetUserInfoToCtx(ctx context.Context, claims *TokenClaims) context.Context {
+func SetUserInfoToCtx(ctx context.Context, claims *Claims) context.Context {
 	return context.WithValue(ctx, userHeaderKey, claims)
 }
 
