@@ -25,8 +25,6 @@ type RedisConfig struct {
 }
 
 type JwtConfig struct {
-	PrivateKey    string        `env:"_PRIVATE_KEY"`
-	PublicKey     string        `env:"_PUBLIC_KEY"`
 	AccessExpiry  time.Duration `env:"_ACCESS_EXPIRY"`
 	RefreshExpiry time.Duration `env:"_REFRESH_EXPIRY"`
 }

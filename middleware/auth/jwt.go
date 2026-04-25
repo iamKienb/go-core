@@ -1,8 +1,10 @@
 package authx
 
 import (
+	"crypto/rsa"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -18,12 +20,22 @@ type jwtClaims struct {
 }
 
 type JWTGenerator struct {
-	cfg configx.JwtConfig
+	privateKey *rsa.PrivateKey
+	publicKey  *rsa.PublicKey
+	cfg        configx.JwtConfig
 }
 
 func NewJWTGenerator(cfg configx.JwtConfig) Generator {
+	privBytes, _ := os.ReadFile("private.pem")
+	privKey, _ := jwt.ParseRSAPrivateKeyFromPEM(privBytes)
+
+	pubBytes, _ := os.ReadFile("public.pem")
+	pubKey, _ := jwt.ParseRSAPublicKeyFromPEM(pubBytes)
+
 	return &JWTGenerator{
-		cfg: cfg,
+		privateKey: privKey,
+		publicKey:  pubKey,
+		cfg:        cfg,
 	}
 }
 
@@ -32,12 +44,12 @@ func (g *JWTGenerator) GeneratePair(claims Claims) (*Pair, error) {
 	accessExpAt := now.Add(g.cfg.AccessExpiry)
 	refreshExpAt := now.Add(g.cfg.RefreshExpiry)
 
-	accessToken, err := g.Sign(claims, accessExpAt, g.cfg.PrivateKey)
+	accessToken, err := g.Sign(claims, accessExpAt)
 	if err != nil {
 		return nil, fmt.Errorf("jwt: sign access token: %w", err)
 	}
 
-	refreshToken, err := g.Sign(claims, refreshExpAt, g.cfg.PrivateKey)
+	refreshToken, err := g.Sign(claims, refreshExpAt)
 	if err != nil {
 		return nil, fmt.Errorf("jwt: sign refresh token: %w", err)
 	}
@@ -50,14 +62,9 @@ func (g *JWTGenerator) GeneratePair(claims Claims) (*Pair, error) {
 	}, nil
 }
 
-func (g *JWTGenerator) Sign(claims Claims, expiryAt time.Time, secretKey string) (string, error) {
-	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(secretKey))
-	if err != nil {
-		return "", fmt.Errorf("invalid private key: %w", err)
-	}
-
+func (g *JWTGenerator) Sign(claims Claims, expiryAt time.Time) (string, error) {
 	claim := jwtClaims{
-		UserID:          claims.UserId,
+		UserID:          claims.UserID,
 		Email:           claims.Email,
 		Roles:           claims.Roles,
 		PasswordVersion: claims.PasswordVersion,
@@ -68,7 +75,7 @@ func (g *JWTGenerator) Sign(claims Claims, expiryAt time.Time, secretKey string)
 		},
 	}
 
-	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claim).SignedString(key)
+	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claim).SignedString(g.privateKey)
 	if err != nil {
 		return "", err
 	}
@@ -77,16 +84,11 @@ func (g *JWTGenerator) Sign(claims Claims, expiryAt time.Time, secretKey string)
 }
 
 func (g *JWTGenerator) Verify(tokenString string) (*Claims, error) {
-	key, err := jwt.ParseRSAPublicKeyFromPEM([]byte(g.cfg.PublicKey))
-	if err != nil {
-		return nil, fmt.Errorf("jwt: invalid public key: %w", err)
-	}
-
 	token, err := jwt.ParseWithClaims(tokenString, &jwtClaims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("jwt: unexpected signing method: %v", t.Header["alg"])
 		}
-		return key, nil
+		return g.publicKey, nil
 	})
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
@@ -97,7 +99,7 @@ func (g *JWTGenerator) Verify(tokenString string) (*Claims, error) {
 
 	if claims, ok := token.Claims.(*jwtClaims); ok && token.Valid {
 		return &Claims{
-			UserId:          claims.UserID,
+			UserID:          claims.UserID,
 			Email:           claims.Email,
 			Roles:           claims.Roles,
 			PasswordVersion: claims.PasswordVersion,

@@ -3,7 +3,7 @@ package authx
 import "time"
 
 type Claims struct {
-	UserId          string
+	UserID          string
 	Email           string
 	Roles           []string
 	PasswordVersion int

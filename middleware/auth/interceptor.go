@@ -18,7 +18,7 @@ func AuthInternalInterceptor() connect.UnaryInterceptorFunc {
 			ctx = SetRequestIDToCtx(ctx, reqID)
 
 			claims := &Claims{
-				UserId: req.Header().Get(HeaderUserID),
+				UserID: req.Header().Get(HeaderUserID),
 				Email:  req.Header().Get(HeaderUserEmail),
 				Roles:  strings.Split(req.Header().Get(HeaderUserRole), ","),
 			}
