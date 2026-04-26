@@ -7,6 +7,7 @@ import (
 	"runtime/debug"
 
 	"connectrpc.com/connect"
+	app_error "github.com/iamKienb/shopify-go-platform/app_error"
 	authx "github.com/iamKienb/shopify-go-platform/middleware/auth"
 	"github.com/iamKienb/shopify-go-platform/utils"
 )
@@ -27,7 +28,7 @@ func RecoveryInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
 						slog.String("stack", string(debug.Stack())),
 					)
 
-					err = connect.NewError(connect.CodeInternal, errors.New("INTERNAL_SERVER_ERROR"))
+					err = app_error.Internal(errors.New("panic recovered"))
 				}
 			}()
 

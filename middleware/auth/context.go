@@ -9,9 +9,11 @@ const (
 	HeaderUserEmail = "X-User-Email"
 )
 
+type contextKey string
+
 const (
-	userHeaderKey      = "user_info"
-	requestIDHeaderKey = "request_id"
+	userHeaderKey      contextKey = "user_info"
+	requestIDHeaderKey contextKey = "request_id"
 )
 
 func GetUserInfoFromCtx(ctx context.Context) *Claims {
@@ -35,5 +37,5 @@ func SetUserInfoToCtx(ctx context.Context, claims *Claims) context.Context {
 }
 
 func SetRequestIDToCtx(ctx context.Context, reqID string) context.Context {
-	return context.WithValue(ctx, userHeaderKey, reqID)
+	return context.WithValue(ctx, requestIDHeaderKey, reqID)
 }

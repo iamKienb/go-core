@@ -4,6 +4,7 @@ import "errors"
 
 type ErrorMapping struct {
 	Kind Kind
+	Code string
 	Msg  string
 }
 
@@ -14,14 +15,17 @@ func WrapError(err error, errMap ServiceErrorMap) error {
 		return nil
 	}
 
-	var appErr *AppError
-	if errors.As(err, &appErr) {
-		return err
+	if appErr := From(err); appErr != nil && errors.As(err, &appErr) {
+		return appErr
 	}
 
 	for sentinel, mapping := range errMap {
 		if errors.Is(err, sentinel) {
-			return Transform(mapping.Kind, mapping.Msg, err)
+			code := mapping.Code
+			if code == "" {
+				code = sentinel.Error()
+			}
+			return New(mapping.Kind, code, mapping.Msg, err)
 		}
 	}
 

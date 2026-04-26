@@ -5,24 +5,31 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 )
 
 func AuthInternalInterceptor() connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			reqID := req.Header().Get(HeaderRequestID)
-			if reqID == "" {
-				reqID = "internal-" + uuid.NewString()
+			if reqID != "" {
+				ctx = SetRequestIDToCtx(ctx, reqID)
 			}
-			ctx = SetRequestIDToCtx(ctx, reqID)
 
-			claims := &Claims{
-				UserID: req.Header().Get(HeaderUserID),
-				Email:  req.Header().Get(HeaderUserEmail),
-				Roles:  strings.Split(req.Header().Get(HeaderUserRole), ","),
+			var roles []string
+			if rawRoles := req.Header().Get(HeaderUserRole); rawRoles != "" {
+				roles = strings.Split(rawRoles, ",")
 			}
-			ctx = SetUserInfoToCtx(ctx, claims)
+
+			userID := req.Header().Get(HeaderUserID)
+			email := req.Header().Get(HeaderUserEmail)
+			if userID != "" || email != "" || len(roles) > 0 {
+				claims := &Claims{
+					UserID: userID,
+					Email:  email,
+					Roles:  roles,
+				}
+				ctx = SetUserInfoToCtx(ctx, claims)
+			}
 
 			return next(ctx, req)
 		}

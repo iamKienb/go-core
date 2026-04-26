@@ -3,7 +3,6 @@ package redisx
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	configx "github.com/iamKienb/shopify-go-platform/config"
@@ -32,8 +31,6 @@ func New(cfg configx.RedisConfig) (*Client, error) {
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("redis ping failed: %w", err)
 	}
-
-	log.Printf("Redis connected successfully to port: %d", cfg.Port)
 
 	return &Client{Conn: rdb}, nil
 }

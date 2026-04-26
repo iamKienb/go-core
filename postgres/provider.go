@@ -3,7 +3,6 @@ package postgresx
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	configx "github.com/iamKienb/shopify-go-platform/config"
@@ -43,8 +42,6 @@ func New(cfg configx.PostgresConfig) (*Client, error) {
 		pool.Close()
 		return nil, fmt.Errorf("ping postgres failed: %w", err)
 	}
-
-	log.Printf("Postgres connected successfully to database: %s", cfg.Db)
 
 	return &Client{Pool: pool}, nil
 }

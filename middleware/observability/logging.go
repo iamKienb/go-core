@@ -18,31 +18,28 @@ func LoggingInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
 			resp, err := next(ctx, req)
 
 			duration := time.Since(start)
-			code := connect.CodeOf(err)
-
-			level := slog.LevelInfo
 			if err != nil {
-				if code == connect.CodeInternal || code == connect.CodeUnknown || code == connect.CodeUnavailable {
-					level = slog.LevelError
-				} else {
-					level = slog.LevelWarn
-				}
+				return resp, err
 			}
 
-			attrs := []any{
+			if duration < 500*time.Millisecond {
+				logger.DebugContext(ctx, "request completed",
+					slog.String("req_id", authx.GetRequestID(ctx)),
+					slog.String("trace_id", utils.ExtractTraceID(ctx)),
+					slog.String("method", req.Spec().Procedure),
+					slog.Duration("latency", duration),
+				)
+				return resp, nil
+			}
+
+			logger.WarnContext(ctx, "slow request",
 				slog.String("req_id", authx.GetRequestID(ctx)),
 				slog.String("trace_id", utils.ExtractTraceID(ctx)),
 				slog.String("method", req.Spec().Procedure),
-				slog.String("status", code.String()),
+				slog.String("status", "ok"),
 				slog.Duration("latency", duration),
 				slog.String("ip", req.Peer().Addr),
-			}
-
-			if err != nil {
-				attrs = append(attrs, slog.String("error", err.Error()))
-			}
-
-			logger.Log(ctx, level, "gRPC Request Completed", attrs...)
+			)
 
 			return resp, err
 		}

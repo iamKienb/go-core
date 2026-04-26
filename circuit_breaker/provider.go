@@ -2,8 +2,8 @@ package cbx
 
 import (
 	"errors"
-	"fmt"
 
+	app_error "github.com/iamKienb/shopify-go-platform/app_error"
 	configx "github.com/iamKienb/shopify-go-platform/config"
 	"github.com/sony/gobreaker"
 )
@@ -33,9 +33,9 @@ func (c *CircuitBreaker) Execute(fn func() (interface{}, error)) (interface{}, e
 	result, err := c.cb.Execute(fn)
 	if err != nil {
 		if errors.Is(err, gobreaker.ErrOpenState) {
-			return nil, fmt.Errorf("circuit breaker is open: service unavailable")
+			return nil, app_error.Unavailable("service temporarily unavailable", err)
 		}
-		return nil, err
+		return nil, app_error.Unavailable("service temporarily unavailable", err)
 	}
 
 	return result, nil
