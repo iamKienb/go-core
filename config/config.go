@@ -24,6 +24,14 @@ type RedisConfig struct {
 	PoolSize int    `env:"_REDIS_POOL_SIZE"`
 }
 
+type ElasticSearchConfig struct {
+	Addresses []string `env:"_ELASTICSEARCH_ADDRESSES"`
+	Username  string   `env:"_ELASTICSEARCH_USERNAME"`
+	Password  string   `env:"_ELASTICSEARCH_PASSWORD"`
+	CloudID   string   `env:"_ELASTICSEARCH_CLOUD_ID"`
+	APIKey    string   `env:"_ELASTICSEARCH_API_KEY"`
+}
+
 type JwtConfig struct {
 	AccessExpiry  time.Duration `env:"_ACCESS_EXPIRY"`
 	RefreshExpiry time.Duration `env:"_REFRESH_EXPIRY"`
@@ -38,8 +46,11 @@ type Argon2Config struct {
 }
 
 type KafkaConfig struct {
-	Brokers  []string `env:"_KAFKA_BROKERS" envSeparator:","`
-	ClientID string   `env:"_KAFKA_CLIENT_ID"`
+	Brokers      []string      `env:"_KAFKA_BROKERS" envSeparator:","`
+	ClientID     string        `env:"_KAFKA_CLIENT_ID"`
+	DialTimeout  time.Duration `env:"_KAFKA_DIAL_TIMEOUT" envDefault:"5s"`
+	ReadTimeout  time.Duration `env:"_KAFKA_READ_TIMEOUT" envDefault:"10s"`
+	WriteTimeout time.Duration `env:"_KAFKA_WRITE_TIMEOUT" envDefault:"10s"`
 }
 
 type CircuitBreakerConfig struct {

@@ -9,24 +9,16 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type RedisService struct {
-	client *redis.Client
-}
-
-func NewRedisService(client *redis.Client) RedisProvider {
-	return &RedisService{client: client}
-}
-
-func (s *RedisService) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
+func (x *RedisX) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
-	return s.client.Set(ctx, key, data, ttl).Err()
+	return x.client.Set(ctx, key, data, ttl).Err()
 }
 
-func (s *RedisService) Get(ctx context.Context, key string, dest any) error {
-	val, err := s.client.Get(ctx, key).Result()
+func (x *RedisX) Get(ctx context.Context, key string, dest any) error {
+	val, err := x.client.Get(ctx, key).Result()
 	if errors.Is(err, redis.Nil) {
 		return redis.Nil
 	}
@@ -36,28 +28,28 @@ func (s *RedisService) Get(ctx context.Context, key string, dest any) error {
 	return json.Unmarshal([]byte(val), dest)
 }
 
-func (s *RedisService) Exists(ctx context.Context, key string) (bool, error) {
-	n, err := s.client.Exists(ctx, key).Result()
+func (x *RedisX) Exists(ctx context.Context, key string) (bool, error) {
+	n, err := x.client.Exists(ctx, key).Result()
 	return n > 0, err
 }
 
-func (s *RedisService) Delete(ctx context.Context, key string) error {
-	return s.client.Del(ctx, key).Err()
+func (x *RedisX) Delete(ctx context.Context, key string) error {
+	return x.client.Del(ctx, key).Err()
 }
 
-func (s *RedisService) Incr(ctx context.Context, key string) (int64, error) {
-	return s.client.Incr(ctx, key).Result()
+func (x *RedisX) Incr(ctx context.Context, key string) (int64, error) {
+	return x.client.Incr(ctx, key).Result()
 }
 
-func (s *RedisService) Expire(ctx context.Context, key string, ttl time.Duration) error {
-	return s.client.Expire(ctx, key, ttl).Err()
+func (x *RedisX) Expire(ctx context.Context, key string, ttl time.Duration) error {
+	return x.client.Expire(ctx, key, ttl).Err()
 }
 
-func (s *RedisService) Lock(ctx context.Context, key string, value string, ttl time.Duration) (bool, error) {
-	return s.client.SetNX(ctx, key, value, ttl).Result()
+func (x *RedisX) Lock(ctx context.Context, key string, value string, ttl time.Duration) (bool, error) {
+	return x.client.SetNX(ctx, key, value, ttl).Result()
 }
 
-func (s *RedisService) Unlock(ctx context.Context, key string, value string) error {
+func (x *RedisX) Unlock(ctx context.Context, key string, value string) error {
 	var script = redis.NewScript(`
 		if redis.call("get", KEYS[1]) == ARGV[1] then
 			return redis.call("del", KEYS[1])
@@ -65,7 +57,7 @@ func (s *RedisService) Unlock(ctx context.Context, key string, value string) err
             return 0
         end
 	`)
-	res, err := script.Run(ctx, s.client, []string{key}, value).Int()
+	res, err := script.Run(ctx, x.client, []string{key}, value).Int()
 	if err != nil {
 		return err
 	}
@@ -73,4 +65,12 @@ func (s *RedisService) Unlock(ctx context.Context, key string, value string) err
 		return errors.New("could not unlock: key not found or value mismatch")
 	}
 	return nil
+}
+
+func (x *RedisX) GetClient() *redis.Client {
+	return x.client
+}
+
+func (x *RedisX) Close() error {
+	return x.client.Close()
 }

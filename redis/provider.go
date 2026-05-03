@@ -9,11 +9,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type Client struct {
-	Conn *redis.Client
+type RedisX struct {
+	client *redis.Client
 }
 
-func New(cfg configx.RedisConfig) (*Client, error) {
+func New(cfg configx.RedisConfig) (RedisService, error) {
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
 	rdb := redis.NewClient(&redis.Options{
@@ -32,9 +32,5 @@ func New(cfg configx.RedisConfig) (*Client, error) {
 		return nil, fmt.Errorf("redis ping failed: %w", err)
 	}
 
-	return &Client{Conn: rdb}, nil
-}
-
-func (c *Client) Close() error {
-	return c.Conn.Close()
+	return &RedisX{client: rdb}, nil
 }

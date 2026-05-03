@@ -20,7 +20,7 @@ type Locker interface {
 	Unlock(ctx context.Context, key string, value string) error
 }
 
-type RedisProvider interface {
+type RedisService interface {
 	Cache
 	Locker
 }

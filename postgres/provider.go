@@ -9,11 +9,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Client struct {
+type PgX struct {
 	Pool *pgxpool.Pool
 }
 
-func New(cfg configx.PostgresConfig) (*Client, error) {
+func New(cfg configx.PostgresConfig) (*PgX, error) {
 	dsn := fmt.Sprintf(
 		"postgresql://%s:%s@%s:%d/%s?sslmode=disable",
 		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Db,
@@ -43,11 +43,15 @@ func New(cfg configx.PostgresConfig) (*Client, error) {
 		return nil, fmt.Errorf("ping postgres failed: %w", err)
 	}
 
-	return &Client{Pool: pool}, nil
+	return &PgX{Pool: pool}, nil
 }
 
-func (c *Client) Close() {
-	if c.Pool != nil {
-		c.Pool.Close()
+func (x *PgX) GetPool() *pgxpool.Pool {
+	return x.Pool
+}
+
+func (x *PgX) Close() {
+	if x.Pool != nil {
+		x.Pool.Close()
 	}
 }
