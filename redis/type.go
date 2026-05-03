@@ -3,6 +3,8 @@ package redisx
 import (
 	"context"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type Cache interface {
@@ -23,4 +25,6 @@ type Locker interface {
 type RedisService interface {
 	Cache
 	Locker
+	GetClient() *redis.Client
+	Close() error
 }

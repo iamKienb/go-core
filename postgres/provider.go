@@ -10,7 +10,7 @@ import (
 )
 
 type PgX struct {
-	Pool *pgxpool.Pool
+	pool *pgxpool.Pool
 }
 
 func New(cfg configx.PostgresConfig) (*PgX, error) {
@@ -43,15 +43,13 @@ func New(cfg configx.PostgresConfig) (*PgX, error) {
 		return nil, fmt.Errorf("ping postgres failed: %w", err)
 	}
 
-	return &PgX{Pool: pool}, nil
+	return &PgX{pool: pool}, nil
 }
 
 func (x *PgX) GetPool() *pgxpool.Pool {
-	return x.Pool
+	return x.pool
 }
 
 func (x *PgX) Close() {
-	if x.Pool != nil {
-		x.Pool.Close()
-	}
+	x.pool.Close()
 }
