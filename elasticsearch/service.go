@@ -43,7 +43,7 @@ func (x *ESX) BootstrapIndex(ctx context.Context, alias string, mappingJson stri
 }
 
 func (x *ESX) Sync(ctx context.Context, alias, id string, data any) error {
-	_, err := x.client.Update(alias, id).Do(ctx)
+	_, err := x.client.Update(alias, id).Doc(data).DocAsUpsert(true).Do(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to sync data to ES: %w", err)
 	}
