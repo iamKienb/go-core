@@ -29,7 +29,7 @@ type Producer struct {
 	topic  string
 }
 
-func NewProducer(client *Client, cfg ProducerConfig) (*Producer, error) {
+func NewProducer(client *KafkaX, cfg ProducerConfig) (*Producer, error) {
 	if client == nil {
 		return nil, errors.New("kafka producer: client must not be nil")
 	}

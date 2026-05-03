@@ -13,7 +13,7 @@ type RedisX struct {
 	client *redis.Client
 }
 
-func New(cfg configx.RedisConfig) (RedisService, error) {
+func New(cfg configx.RedisConfig) (RedisXService, error) {
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
 	rdb := redis.NewClient(&redis.Options{

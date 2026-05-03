@@ -10,18 +10,8 @@ import (
 
 type txKey struct{}
 
-type pgxTxManager struct {
-	pool *pgxpool.Pool
-}
-
-func NewTxManager(pool *pgxpool.Pool) TxManager {
-	return &pgxTxManager{
-		pool: pool,
-	}
-}
-
-func (m *pgxTxManager) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
-	tx, err := m.pool.Begin(ctx)
+func (x *PGX) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	tx, err := x.pool.Begin(ctx)
 
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
@@ -39,6 +29,14 @@ func (m *pgxTxManager) WithTx(ctx context.Context, fn func(ctx context.Context) 
 	}
 	return nil
 
+}
+
+func (x *PGX) GetPool() *pgxpool.Pool {
+	return x.pool
+}
+
+func (x *PGX) Close() {
+	x.pool.Close()
 }
 
 func ExtractTx(ctx context.Context) pgx.Tx {

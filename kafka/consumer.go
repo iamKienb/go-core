@@ -31,7 +31,7 @@ type Consumer struct {
 	cfg         ConsumerConfig
 }
 
-func NewConsumer(client *Client, cfg ConsumerConfig, handler ConsumerHandler) (*Consumer, error) {
+func NewConsumer(client *KafkaX, cfg ConsumerConfig, handler ConsumerHandler) (*Consumer, error) {
 	if client == nil || handler == nil {
 		return nil, errors.New("kafka consumer: client and handler must not be nil")
 	}

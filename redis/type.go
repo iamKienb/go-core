@@ -22,7 +22,7 @@ type Locker interface {
 	Unlock(ctx context.Context, key string, value string) error
 }
 
-type RedisService interface {
+type RedisXService interface {
 	Cache
 	Locker
 	GetClient() *redis.Client

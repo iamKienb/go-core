@@ -19,7 +19,7 @@ type BulkConfig struct {
 	NumWorkers    int
 }
 
-type ElasticsearchService interface {
+type ESXService interface {
 	BootstrapIndex(ctx context.Context, alias string, mappingJson string) error
 	Sync(ctx context.Context, alias, id string, data any) error
 	BulkWorker(alias string, cfg BulkConfig) (esutil.BulkIndexer, error)

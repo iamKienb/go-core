@@ -12,7 +12,7 @@ type ESX struct {
 	client *elasticsearch.TypedClient
 }
 
-func New(cfg configx.ElasticSearchConfig) (ElasticsearchService, error) {
+func New(cfg configx.ElasticSearchConfig) (ESXService, error) {
 	esCfg := elasticsearch.Config{
 		Addresses: cfg.Addresses,
 	}
