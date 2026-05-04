@@ -1,6 +1,10 @@
 package authx
 
-import "context"
+import (
+	"context"
+
+	jwtx "github.com/iamKienb/shopify-go-platform/jwt"
+)
 
 const (
 	HeaderRequestID = "X-Request-ID"
@@ -16,8 +20,8 @@ const (
 	requestIDHeaderKey contextKey = "request_id"
 )
 
-func GetUserInfoFromCtx(ctx context.Context) *Claims {
-	if claims, ok := ctx.Value(userHeaderKey).(*Claims); ok {
+func GetUserInfoFromCtx(ctx context.Context) *jwtx.Claims {
+	if claims, ok := ctx.Value(userHeaderKey).(*jwtx.Claims); ok {
 		return claims
 	}
 
@@ -32,7 +36,7 @@ func GetRequestID(ctx context.Context) string {
 	return ""
 }
 
-func SetUserInfoToCtx(ctx context.Context, claims *Claims) context.Context {
+func SetUserInfoToCtx(ctx context.Context, claims *jwtx.Claims) context.Context {
 	return context.WithValue(ctx, userHeaderKey, claims)
 }
 

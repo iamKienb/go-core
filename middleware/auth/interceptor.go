@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	jwtx "github.com/iamKienb/shopify-go-platform/jwt"
 )
 
 func AuthInternalInterceptor() connect.UnaryInterceptorFunc {
@@ -23,7 +24,7 @@ func AuthInternalInterceptor() connect.UnaryInterceptorFunc {
 			userID := req.Header().Get(HeaderUserID)
 			email := req.Header().Get(HeaderUserEmail)
 			if userID != "" || email != "" || len(roles) > 0 {
-				claims := &Claims{
+				claims := &jwtx.Claims{
 					UserID: userID,
 					Email:  email,
 					Roles:  roles,
