@@ -2,6 +2,7 @@ package esx
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -32,9 +33,20 @@ func (x *ESX) BootstrapIndex(ctx context.Context, alias string, mappingJson stri
 
 		return nil
 	}
+	var body map[string]interface{}
+	if err := json.Unmarshal([]byte(mappingJson), &body); err != nil {
+		return fmt.Errorf("failed to parse mapping json: %w", err)
+	}
+
+	mappings, ok := body["mappings"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("mapping file missing 'mappings' root element")
+	}
+
+	mappingsOnlyJson, _ := json.Marshal(mappings)
 
 	_, err = x.client.Indices.PutMapping(alias).
-		Raw(strings.NewReader(mappingJson)).Do(ctx)
+		Raw(strings.NewReader(string(mappingsOnlyJson))).Do(ctx)
 	if err != nil {
 		return fmt.Errorf("update mapping for alias %s: %w", alias, err)
 	}
