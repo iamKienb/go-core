@@ -21,9 +21,9 @@ type Consumer struct {
 	logger      *slog.Logger
 }
 
-func NewConsumer(client *KafkaX, cfg configx.ConsumerConfig, logger *slog.Logger, handler ConsumerHandler) (*Consumer, error) {
-	if client == nil || handler == nil {
-		return nil, errors.New("kafka consumer: client and handler must not be nil")
+func NewConsumer(service KafkaXService, cfg configx.ConsumerConfig, logger *slog.Logger, handler ConsumerHandler) (*Consumer, error) {
+	if service == nil || handler == nil {
+		return nil, errors.New("kafka consumer: client service and handler must not be nil")
 	}
 
 	if strings.TrimSpace(cfg.Topic) == "" || strings.TrimSpace(cfg.GroupID) == "" {
@@ -31,19 +31,19 @@ func NewConsumer(client *KafkaX, cfg configx.ConsumerConfig, logger *slog.Logger
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  client.Brokers(),
+		Brokers:  service.Brokers(),
 		GroupID:  cfg.GroupID,
 		Topic:    cfg.Topic,
 		MinBytes: cfg.MinBytes,
 		MaxBytes: cfg.MaxBytes,
 		MaxWait:  cfg.MaxWait,
-		Dialer:   client.Dialer(),
+		Dialer:   service.Dialer(),
 	})
 
 	var dlqProducer *Producer
 	if cfg.DLQTopic != "" {
 		var err error
-		dlqProducer, err = NewProducer(client, configx.ProducerConfig{
+		dlqProducer, err = NewProducer(service, configx.ProducerConfig{
 			Topic:        cfg.DLQTopic,
 			Balancer:     "least_bytes",
 			BatchTimeout: 50 * time.Millisecond,

@@ -16,16 +16,16 @@ type Producer struct {
 	topic  string
 }
 
-func NewProducer(client *KafkaX, cfg configx.ProducerConfig) (*Producer, error) {
-	if client == nil {
-		return nil, errors.New("kafka producer: client must not be nil")
+func NewProducer(service KafkaXService, cfg configx.ProducerConfig) (*Producer, error) {
+	if service == nil {
+		return nil, errors.New("kafka producer: client service must not be nil")
 	}
 	if strings.TrimSpace(cfg.Topic) == "" {
 		return nil, errors.New("kafka producer: topic must not be empty")
 	}
 
 	writer := &kafka.Writer{
-		Addr:                   kafka.TCP(client.Brokers()...),
+		Addr:                   kafka.TCP(service.Brokers()...),
 		Topic:                  cfg.Topic,
 		Balancer:               &kafka.LeastBytes{},
 		BatchTimeout:           cfg.BatchTimeout,
@@ -34,7 +34,7 @@ func NewProducer(client *KafkaX, cfg configx.ProducerConfig) (*Producer, error) 
 		AllowAutoTopicCreation: cfg.AllowAutoTopic,
 		Async:                  false,
 		MaxAttempts:            cfg.MaxAttempts,
-		Transport:              client.Transport(),
+		Transport:              service.Transport(),
 		ReadTimeout:            cfg.ReadTimeout,
 		WriteTimeout:           cfg.WriteTimeout,
 		Compression:            resolveCompression(cfg.Compression),
