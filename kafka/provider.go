@@ -14,7 +14,7 @@ type KafkaX struct {
 	transport *kafka.Transport
 }
 
-func New(cfg configx.KafkaConfig) (*KafkaX, error) {
+func New(cfg configx.KafkaConfig) (KafkaXService, error) {
 	if err := validateConfig(cfg); err != nil {
 		return nil, err
 	}

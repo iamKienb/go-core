@@ -5,31 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
+	configx "github.com/iamKienb/shopify-go-platform/config"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/compress"
 )
-
-type ProducerConfig struct {
-	Topic          string
-	Balancer       string
-	Compression    string
-	BatchTimeout   time.Duration
-	BatchBytes     int64
-	RequiredAcks   kafka.RequiredAcks
-	AllowAutoTopic bool
-	WriteTimeout   time.Duration
-	ReadTimeout    time.Duration
-	MaxAttempts    int
-}
 
 type Producer struct {
 	writer *kafka.Writer
 	topic  string
 }
 
-func NewProducer(client *KafkaX, cfg ProducerConfig) (*Producer, error) {
+func NewProducer(client *KafkaX, cfg configx.ProducerConfig) (*Producer, error) {
 	if client == nil {
 		return nil, errors.New("kafka producer: client must not be nil")
 	}
@@ -41,15 +28,15 @@ func NewProducer(client *KafkaX, cfg ProducerConfig) (*Producer, error) {
 		Addr:                   kafka.TCP(client.Brokers()...),
 		Topic:                  cfg.Topic,
 		Balancer:               &kafka.LeastBytes{},
-		BatchTimeout:           defaultDuration(cfg.BatchTimeout, 50*time.Millisecond),
-		BatchBytes:             defaultInt64(cfg.BatchBytes, 1024*1024),
-		RequiredAcks:           defaultAcks(cfg.RequiredAcks),
+		BatchTimeout:           cfg.BatchTimeout,
+		BatchBytes:             cfg.BatchBytes,
+		RequiredAcks:           cfg.RequiredAcks,
 		AllowAutoTopicCreation: cfg.AllowAutoTopic,
 		Async:                  false,
-		MaxAttempts:            defaultInt(cfg.MaxAttempts, 3),
+		MaxAttempts:            cfg.MaxAttempts,
 		Transport:              client.Transport(),
-		ReadTimeout:            defaultDuration(cfg.ReadTimeout, 10*time.Second),
-		WriteTimeout:           defaultDuration(cfg.WriteTimeout, 10*time.Second),
+		ReadTimeout:            cfg.ReadTimeout,
+		WriteTimeout:           cfg.WriteTimeout,
 		Compression:            resolveCompression(cfg.Compression),
 	}
 
@@ -103,31 +90,4 @@ func resolveCompression(name string) compress.Compression {
 	default:
 		return compress.None
 	}
-}
-
-func defaultDuration(value, fallback time.Duration) time.Duration {
-	if value <= 0 {
-		return fallback
-	}
-	return value
-}
-
-func defaultInt(value, fallback int) int {
-	if value <= 0 {
-		return fallback
-	}
-	return value
-}
-func defaultInt64(value, fallback int64) int64 {
-	if value <= 0 {
-		return fallback
-	}
-	return value
-}
-
-func defaultAcks(value kafka.RequiredAcks) kafka.RequiredAcks {
-	if value == 0 {
-		return kafka.RequireAll
-	}
-	return value
 }

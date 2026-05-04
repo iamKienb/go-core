@@ -9,29 +9,19 @@ import (
 	"strings"
 	"time"
 
+	configx "github.com/iamKienb/shopify-go-platform/config"
 	"github.com/segmentio/kafka-go"
 )
-
-type ConsumerConfig struct {
-	GroupID      string
-	Topic        string
-	DLQTopic     string
-	MinBytes     int
-	MaxBytes     int
-	MaxWait      time.Duration
-	MaxAttempts  int
-	RetryBackoff time.Duration
-	Logger       *slog.Logger
-}
 
 type Consumer struct {
 	reader      *kafka.Reader
 	handler     ConsumerHandler
 	dlqProducer *Producer
-	cfg         ConsumerConfig
+	cfg         configx.ConsumerConfig
+	logger      *slog.Logger
 }
 
-func NewConsumer(client *KafkaX, cfg ConsumerConfig, handler ConsumerHandler) (*Consumer, error) {
+func NewConsumer(client *KafkaX, cfg configx.ConsumerConfig, logger *slog.Logger, handler ConsumerHandler) (*Consumer, error) {
 	if client == nil || handler == nil {
 		return nil, errors.New("kafka consumer: client and handler must not be nil")
 	}
@@ -39,8 +29,6 @@ func NewConsumer(client *KafkaX, cfg ConsumerConfig, handler ConsumerHandler) (*
 	if strings.TrimSpace(cfg.Topic) == "" || strings.TrimSpace(cfg.GroupID) == "" {
 		return nil, errors.New("kafka consumer: topic and group id must not be empty")
 	}
-
-	cfg = normalizeConsumerConfig(cfg)
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  client.Brokers(),
@@ -55,7 +43,7 @@ func NewConsumer(client *KafkaX, cfg ConsumerConfig, handler ConsumerHandler) (*
 	var dlqProducer *Producer
 	if cfg.DLQTopic != "" {
 		var err error
-		dlqProducer, err = NewProducer(client, ProducerConfig{
+		dlqProducer, err = NewProducer(client, configx.ProducerConfig{
 			Topic:        cfg.DLQTopic,
 			Balancer:     "least_bytes",
 			BatchTimeout: 50 * time.Millisecond,
@@ -173,38 +161,19 @@ func (c *Consumer) Close() error {
 }
 
 func (c *Consumer) logInfo(ctx context.Context, msg string, args ...any) {
-	if c.cfg.Logger != nil {
-		c.cfg.Logger.InfoContext(ctx, msg, args...)
+	if c.logger != nil {
+		c.logger.InfoContext(ctx, msg, args...)
 	}
 }
 
 func (c *Consumer) logWarn(ctx context.Context, message string, attrs ...any) {
-	if c.cfg.Logger != nil {
-		c.cfg.Logger.WarnContext(ctx, message, attrs...)
+	if c.logger != nil {
+		c.logger.WarnContext(ctx, message, attrs...)
 	}
 }
 
 func (c *Consumer) logError(ctx context.Context, message string, attrs ...any) {
-	if c.cfg.Logger != nil {
-		c.cfg.Logger.ErrorContext(ctx, message, attrs...)
+	if c.logger != nil {
+		c.logger.ErrorContext(ctx, message, attrs...)
 	}
-}
-
-func normalizeConsumerConfig(cfg ConsumerConfig) ConsumerConfig {
-	if cfg.MinBytes <= 0 {
-		cfg.MinBytes = 10e3
-	}
-	if cfg.MaxBytes <= 0 {
-		cfg.MaxBytes = 10e6
-	}
-	if cfg.MaxWait <= 0 {
-		cfg.MaxWait = 2 * time.Second
-	}
-	if cfg.MaxAttempts <= 0 {
-		cfg.MaxAttempts = 3
-	}
-	if cfg.RetryBackoff <= 0 {
-		cfg.RetryBackoff = 500 * time.Millisecond
-	}
-	return cfg
 }

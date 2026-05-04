@@ -12,7 +12,7 @@ import (
 )
 
 func (x *ESX) BootstrapIndex(ctx context.Context, alias string, mappingJson string) error {
-	exists, err := x.client.Indices.ExistsAlias(alias).Do(ctx)
+	exists, err := x.client.Indices.Exists(alias).Do(ctx)
 	if err != nil {
 		return fmt.Errorf("check alias %s: %w", alias, err)
 	}
