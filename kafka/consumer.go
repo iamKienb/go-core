@@ -59,6 +59,7 @@ func NewConsumer(service KafkaXService, cfg configx.ConsumerConfig, logger *slog
 		handler:     handler,
 		dlqProducer: dlqProducer,
 		cfg:         cfg,
+		logger:      logger,
 	}, nil
 }
 
