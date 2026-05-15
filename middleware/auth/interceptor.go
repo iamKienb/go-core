@@ -23,11 +23,13 @@ func AuthInternalInterceptor() connect.UnaryInterceptorFunc {
 
 			userID := req.Header().Get(HeaderUserID)
 			email := req.Header().Get(HeaderUserEmail)
+			fullName := req.Header().Get(HeaderUserName)
 			if userID != "" || email != "" || len(roles) > 0 {
 				claims := &jwtx.Claims{
-					UserID: userID,
-					Email:  email,
-					Roles:  roles,
+					UserID:   userID,
+					Email:    email,
+					FullName: fullName,
+					Roles:    roles,
 				}
 				ctx = SetUserInfoToCtx(ctx, claims)
 			}

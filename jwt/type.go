@@ -7,6 +7,7 @@ import (
 type Claims struct {
 	UserID          string
 	Email           string
+	FullName        string
 	Roles           []string
 	PasswordVersion int
 }

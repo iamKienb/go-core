@@ -11,6 +11,7 @@ const (
 	HeaderUserID    = "X-User-ID"
 	HeaderUserRole  = "X-User-Role"
 	HeaderUserEmail = "X-User-Email"
+	HeaderUserName  = "X-User-Name"
 )
 
 type contextKey string

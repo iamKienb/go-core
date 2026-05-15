@@ -63,6 +63,15 @@ func (x *ESX) Sync(ctx context.Context, alias, id string, data any) error {
 	return nil
 }
 
+func (x *ESX) Delete(ctx context.Context, alias, id string) error {
+	_, err := x.client.Delete(alias, id).Do(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete data from ES: %w", err)
+	}
+
+	return nil
+}
+
 func (x *ESX) BulkWorker(alias string, cfg BulkConfig) (esutil.BulkIndexer, error) {
 	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
 		Index:         alias,
