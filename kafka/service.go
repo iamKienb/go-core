@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	configx "github.com/iamKienb/shopify-go-platform/config"
+	configx "github.com/iamKienb/go-core/config"
 	"github.com/segmentio/kafka-go"
 )
 

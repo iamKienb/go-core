@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	authx "github.com/iamKienb/shopify-go-platform/middleware/auth"
-	"github.com/iamKienb/shopify-go-platform/utils"
+	authx "github.com/iamKienb/go-core/middleware/auth"
+	"github.com/iamKienb/go-core/utils"
 )
 
 func LoggingInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {

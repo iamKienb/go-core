@@ -3,7 +3,7 @@ package authx
 import (
 	"context"
 
-	jwtx "github.com/iamKienb/shopify-go-platform/jwt"
+	jwtx "github.com/iamKienb/go-core/jwt"
 )
 
 const (

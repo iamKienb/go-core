@@ -69,8 +69,8 @@ type ProducerConfig struct {
 }
 
 type ConsumerConfig struct {
-	GroupID      string        `env:"_CONSUMER_GROUP_ID"`
-	Topic        string        `env:"_CONSUMER_TOPIC"`
+	GroupID      string `env:"_CONSUMER_GROUP_ID"`
+	Topics       []string
 	DLQTopic     string        `env:"_CONSUMER_DLQ_TOPIC"`
 	MinBytes     int           `env:"_CONSUMER_MIN_BYTES"`
 	MaxBytes     int           `env:"_CONSUMER_MAX_BYTES"`

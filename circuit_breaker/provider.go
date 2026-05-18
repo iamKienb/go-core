@@ -3,8 +3,8 @@ package cbx
 import (
 	"errors"
 
-	app_error "github.com/iamKienb/shopify-go-platform/app_error"
-	configx "github.com/iamKienb/shopify-go-platform/config"
+	app_error "github.com/iamKienb/go-core/app_error"
+	configx "github.com/iamKienb/go-core/config"
 	"github.com/sony/gobreaker"
 )
 

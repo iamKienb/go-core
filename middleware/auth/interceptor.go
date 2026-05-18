@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	jwtx "github.com/iamKienb/shopify-go-platform/jwt"
+	jwtx "github.com/iamKienb/go-core/jwt"
 )
 
 func AuthInternalInterceptor() connect.UnaryInterceptorFunc {

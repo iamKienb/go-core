@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/elastic/go-elasticsearch/v8"
-	configx "github.com/iamKienb/shopify-go-platform/config"
+	configx "github.com/iamKienb/go-core/config"
 )
 
 type ESX struct {

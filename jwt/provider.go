@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/golang-jwt/jwt/v4"
-	configx "github.com/iamKienb/shopify-go-platform/config"
+	configx "github.com/iamKienb/go-core/config"
 )
 
 type JWTX struct {

@@ -6,9 +6,9 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
-	app_error "github.com/iamKienb/shopify-go-platform/app_error"
-	authx "github.com/iamKienb/shopify-go-platform/middleware/auth"
-	"github.com/iamKienb/shopify-go-platform/utils"
+	app_error "github.com/iamKienb/go-core/app_error"
+	authx "github.com/iamKienb/go-core/middleware/auth"
+	"github.com/iamKienb/go-core/utils"
 )
 
 func ErrorResponseInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {

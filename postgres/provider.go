@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	configx "github.com/iamKienb/shopify-go-platform/config"
+	configx "github.com/iamKienb/go-core/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

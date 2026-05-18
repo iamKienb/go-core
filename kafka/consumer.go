@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	configx "github.com/iamKienb/shopify-go-platform/config"
+	configx "github.com/iamKienb/go-core/config"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -26,28 +26,32 @@ func NewConsumer(service KafkaXService, cfg configx.ConsumerConfig, logger *slog
 		return nil, errors.New("kafka consumer: client service and handler must not be nil")
 	}
 
-	if strings.TrimSpace(cfg.Topic) == "" || strings.TrimSpace(cfg.GroupID) == "" {
-		return nil, errors.New("kafka consumer: topic and group id must not be empty")
+	if len(cfg.Topics) == 0 {
+		return nil, errors.New("kafka consumer: topics list must not be empty")
+	}
+	if strings.TrimSpace(cfg.GroupID) == "" {
+		return nil, errors.New("kafka consumer: group id must not be empty")
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  service.Brokers(),
-		GroupID:  cfg.GroupID,
-		Topic:    cfg.Topic,
-		MinBytes: cfg.MinBytes,
-		MaxBytes: cfg.MaxBytes,
-		MaxWait:  cfg.MaxWait,
-		Dialer:   service.Dialer(),
+		Brokers:     service.Brokers(),
+		GroupID:     cfg.GroupID,
+		GroupTopics: cfg.Topics,
+		MinBytes:    cfg.MinBytes,
+		MaxBytes:    cfg.MaxBytes,
+		MaxWait:     cfg.MaxWait,
+		Dialer:      service.Dialer(),
 	})
 
 	var dlqProducer *Producer
 	if cfg.DLQTopic != "" {
 		var err error
 		dlqProducer, err = NewProducer(service, configx.ProducerConfig{
-			Topic:        cfg.DLQTopic,
-			Balancer:     "least_bytes",
-			BatchTimeout: 50 * time.Millisecond,
-			MaxAttempts:  3,
+			Topic:          cfg.DLQTopic,
+			Balancer:       "least_bytes",
+			BatchTimeout:   50 * time.Millisecond,
+			AllowAutoTopic: true,
+			MaxAttempts:    3,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("kafka consumer dlq producer init failed: %w", err)
@@ -64,7 +68,7 @@ func NewConsumer(service KafkaXService, cfg configx.ConsumerConfig, logger *slog
 }
 
 func (c *Consumer) Start(ctx context.Context) error {
-	c.logInfo(ctx, "kafka consumer started", slog.String("topic", c.cfg.Topic))
+	c.logInfo(ctx, "kafka consumer starting")
 	for {
 		if ctx.Err() != nil {
 			return nil
@@ -87,7 +91,7 @@ func (c *Consumer) consumeOne(ctx context.Context) error {
 		return fmt.Errorf("kafka fetch failed: %w", err)
 	}
 
-	msg := fromKafkaMessage(c.cfg.Topic, kmsg)
+	msg := fromKafkaMessage(kmsg.Topic, kmsg)
 
 	if err := c.handleWithRetry(ctx, msg); err != nil {
 		if c.dlqProducer != nil {
@@ -118,7 +122,7 @@ func (c *Consumer) handleWithRetry(ctx context.Context, msg Message) error {
 		if err := c.handler.Handle(ctx, msg); err != nil {
 			lastErr = err
 			c.logWarn(ctx, "kafka handler attempt failed",
-				slog.String("topic", c.cfg.Topic),
+				slog.String("topic", msg.Topic),
 				slog.String("group_id", c.cfg.GroupID),
 				slog.Int("attempt", attempt),
 				slog.String("error", err.Error()),
@@ -139,7 +143,7 @@ func (c *Consumer) publishDLQ(ctx context.Context, msg Message, cause error) err
 
 	dlqMsg := msg
 	dlqMsg.Topic = c.cfg.DLQTopic
-	dlqMsg.SetHeader(HeaderOriginalTopic, c.cfg.Topic)
+	dlqMsg.SetHeader(HeaderOriginalTopic, msg.Topic)
 	dlqMsg.SetHeader(HeaderOriginalOffset, strconv.FormatInt(msg.Offset, 10))
 	dlqMsg.SetHeader(HeaderOriginalGroupID, c.cfg.GroupID)
 	dlqMsg.SetHeader(HeaderFailureReason, cause.Error())

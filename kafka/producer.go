@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	configx "github.com/iamKienb/shopify-go-platform/config"
+	configx "github.com/iamKienb/go-core/config"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/compress"
 )
@@ -26,7 +26,6 @@ func NewProducer(service KafkaXService, cfg configx.ProducerConfig) (*Producer, 
 
 	writer := &kafka.Writer{
 		Addr:                   kafka.TCP(service.Brokers()...),
-		Topic:                  cfg.Topic,
 		Balancer:               &kafka.LeastBytes{},
 		BatchTimeout:           cfg.BatchTimeout,
 		BatchBytes:             cfg.BatchBytes,
