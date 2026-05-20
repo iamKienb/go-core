@@ -7,7 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	authx "github.com/iamKienb/go-core/middleware/auth"
-	"github.com/iamKienb/go-core/utils"
+	"github.com/iamKienb/go-core/middleware/shared"
 )
 
 func LoggingInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
@@ -25,7 +25,7 @@ func LoggingInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
 			if duration < 500*time.Millisecond {
 				logger.DebugContext(ctx, "request completed",
 					slog.String("req_id", authx.GetRequestID(ctx)),
-					slog.String("trace_id", utils.ExtractTraceID(ctx)),
+					slog.String("trace_id", shared.ExtractTraceID(ctx)),
 					slog.String("method", req.Spec().Procedure),
 					slog.Duration("latency", duration),
 				)
@@ -34,7 +34,7 @@ func LoggingInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
 
 			logger.WarnContext(ctx, "slow request",
 				slog.String("req_id", authx.GetRequestID(ctx)),
-				slog.String("trace_id", utils.ExtractTraceID(ctx)),
+				slog.String("trace_id", shared.ExtractTraceID(ctx)),
 				slog.String("method", req.Spec().Procedure),
 				slog.String("status", "ok"),
 				slog.Duration("latency", duration),

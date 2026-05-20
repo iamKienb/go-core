@@ -8,7 +8,7 @@ import (
 	"connectrpc.com/connect"
 	app_error "github.com/iamKienb/go-core/app_error"
 	authx "github.com/iamKienb/go-core/middleware/auth"
-	"github.com/iamKienb/go-core/utils"
+	"github.com/iamKienb/go-core/middleware/shared"
 )
 
 func ErrorResponseInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
@@ -72,7 +72,7 @@ func logErrorResponse(ctx context.Context, logger *slog.Logger, req connect.AnyR
 
 	attrs := []any{
 		slog.String("req_id", authx.GetRequestID(ctx)),
-		slog.String("trace_id", utils.ExtractTraceID(ctx)),
+		slog.String("trace_id", shared.ExtractTraceID(ctx)),
 		slog.String("method", req.Spec().Procedure),
 		slog.String("public_code", appErr.PublicCode()),
 		slog.String("public_message", appErr.PublicMessage()),
