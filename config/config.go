@@ -35,8 +35,10 @@ type ElasticSearchConfig struct {
 }
 
 type JwtConfig struct {
-	AccessExpiry  time.Duration `env:"_ACCESS_EXPIRY"`
-	RefreshExpiry time.Duration `env:"_REFRESH_EXPIRY"`
+	AccessExpiry   time.Duration `env:"_ACCESS_EXPIRY"`
+	RefreshExpiry  time.Duration `env:"_REFRESH_EXPIRY"`
+	PrivateKeyPath string        `env:"_PRIVATE_KEY_PATH" envDefault:"private.pem"`
+	PublicKeyPath  string        `env:"_PUBLIC_KEY_PATH" envDefault:"public.pem"`
 }
 
 type Argon2Config struct {
@@ -88,5 +90,6 @@ type CircuitBreakerConfig struct {
 }
 
 type Server struct {
-	GrpcPort int `env:"_GRPC_PORT"`
+	GrpcPort          int    `env:"_GRPC_PORT"`
+	ApiGatewayAddress string `env:"_API_GATEWAY_ADDRESS"`
 }

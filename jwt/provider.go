@@ -18,28 +18,59 @@ type JWTX struct {
 func New(cfg configx.JwtConfig) (JWTXService, error) {
 	generator := &JWTX{cfg: cfg}
 
-	privBytes, err := os.ReadFile("private.pem")
+	if err := generator.loadPrivateKey(keyPath(cfg.PrivateKeyPath, "private.pem")); err != nil {
+		return nil, err
+	}
+	if err := generator.loadPublicKey(keyPath(cfg.PublicKeyPath, "public.pem")); err != nil {
+		return nil, err
+	}
+
+	return generator, nil
+}
+
+func NewVerifier(cfg configx.JwtConfig) (JWTXService, error) {
+	verifier := &JWTX{cfg: cfg}
+	if err := verifier.loadPublicKey(keyPath(cfg.PublicKeyPath, "public.pem")); err != nil {
+		return nil, err
+	}
+
+	return verifier, nil
+}
+
+func (x *JWTX) loadPrivateKey(path string) error {
+	privBytes, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("jwt: read private key: %w", err)
+		return fmt.Errorf("jwt: read private key %q: %w", path, err)
 	}
 
 	privKey, err := jwt.ParseRSAPrivateKeyFromPEM(privBytes)
 	if err != nil {
-		return nil, fmt.Errorf("jwt: parse private key: %w", err)
+		return fmt.Errorf("jwt: parse private key %q: %w", path, err)
 	}
 
-	pubBytes, err := os.ReadFile("public.pem")
+	x.privateKey = privKey
+	return nil
+}
+
+func (x *JWTX) loadPublicKey(path string) error {
+	pubBytes, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("jwt: read public key: %w", err)
+		return fmt.Errorf("jwt: read public key %q: %w", path, err)
 	}
 
 	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(pubBytes)
 	if err != nil {
-		return nil, fmt.Errorf("jwt: parse public key: %w", err)
+		return fmt.Errorf("jwt: parse public key %q: %w", path, err)
 	}
 
-	generator.privateKey = privKey
-	generator.publicKey = pubKey
+	x.publicKey = pubKey
+	return nil
+}
 
-	return generator, nil
+func keyPath(path string, fallback string) string {
+	if path != "" {
+		return path
+	}
+
+	return fallback
 }

@@ -40,6 +40,10 @@ func (x *JWTX) GeneratePair(claims Claims) (*Pair, error) {
 }
 
 func (x *JWTX) Sign(claims Claims, expiryAt time.Time) (string, error) {
+	if x == nil || x.privateKey == nil {
+		return "", fmt.Errorf("jwt: private key is not configured")
+	}
+
 	claim := jwtClaims{
 		UserID:          claims.UserID,
 		Email:           claims.Email,
@@ -61,6 +65,10 @@ func (x *JWTX) Sign(claims Claims, expiryAt time.Time) (string, error) {
 }
 
 func (x *JWTX) Verify(tokenString string) (*Claims, error) {
+	if x == nil || x.publicKey == nil {
+		return nil, fmt.Errorf("jwt: public key is not configured")
+	}
+
 	token, err := jwt.ParseWithClaims(tokenString, &jwtClaims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("jwt: unexpected signing method: %v", t.Header["alg"])
