@@ -11,11 +11,6 @@ import (
 func AuthInternalInterceptor() connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			reqID := req.Header().Get(HeaderRequestID)
-			if reqID != "" {
-				ctx = SetRequestIDToCtx(ctx, reqID)
-			}
-
 			var roles []string
 			if rawRoles := req.Header().Get(HeaderUserRole); rawRoles != "" {
 				roles = strings.Split(rawRoles, ",")

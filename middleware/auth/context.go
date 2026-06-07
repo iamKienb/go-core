@@ -8,6 +8,7 @@ import (
 
 const (
 	HeaderRequestID = "X-Request-ID"
+	HeaderTraceID   = "X-Trace-ID"
 	HeaderUserID    = "X-User-ID"
 	HeaderUserRole  = "X-User-Role"
 	HeaderUserEmail = "X-User-Email"
@@ -19,6 +20,7 @@ type contextKey string
 const (
 	userHeaderKey      contextKey = "user_info"
 	requestIDHeaderKey contextKey = "request_id"
+	traceIDHeaderKey   contextKey = "trace_id"
 )
 
 func GetUserInfoFromCtx(ctx context.Context) *jwtx.Claims {
@@ -37,10 +39,22 @@ func GetRequestID(ctx context.Context) string {
 	return ""
 }
 
+func GetTraceID(ctx context.Context) string {
+	if id, ok := ctx.Value(traceIDHeaderKey).(string); ok {
+		return id
+	}
+
+	return ""
+}
+
 func SetUserInfoToCtx(ctx context.Context, claims *jwtx.Claims) context.Context {
 	return context.WithValue(ctx, userHeaderKey, claims)
 }
 
 func SetRequestIDToCtx(ctx context.Context, reqID string) context.Context {
 	return context.WithValue(ctx, requestIDHeaderKey, reqID)
+}
+
+func SetTraceIDToCtx(ctx context.Context, traceID string) context.Context {
+	return context.WithValue(ctx, traceIDHeaderKey, traceID)
 }

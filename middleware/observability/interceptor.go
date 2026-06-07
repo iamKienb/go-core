@@ -8,7 +8,6 @@ import (
 	"connectrpc.com/connect"
 	app_error "github.com/iamKienb/go-core/app_error"
 	authx "github.com/iamKienb/go-core/middleware/auth"
-	"github.com/iamKienb/go-core/middleware/shared"
 )
 
 func ErrorResponseInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
@@ -21,9 +20,7 @@ func ErrorResponseInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc 
 
 			var connectErr *connect.Error
 			if errors.As(err, &connectErr) {
-				if reqID := authx.GetRequestID(ctx); reqID != "" {
-					connectErr.Meta().Set("x-request-id", reqID)
-				}
+				setResponseMeta(ctx, connectErr.Meta())
 				return nil, connectErr
 			}
 
@@ -35,9 +32,7 @@ func ErrorResponseInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc 
 			cErr := connect.NewError(appErr.Kind.ConnectCode(), errors.New(appErr.PublicMessage()))
 			cErr.Meta().Set("x-error-code", appErr.PublicCode())
 			cErr.Meta().Set("x-error-kind", appErr.Kind.ConnectCode().String())
-			if reqID := authx.GetRequestID(ctx); reqID != "" {
-				cErr.Meta().Set("x-request-id", reqID)
-			}
+			setResponseMeta(ctx, cErr.Meta())
 			return nil, cErr
 		}
 	}
@@ -72,7 +67,7 @@ func logErrorResponse(ctx context.Context, logger *slog.Logger, req connect.AnyR
 
 	attrs := []any{
 		slog.String("req_id", authx.GetRequestID(ctx)),
-		slog.String("trace_id", shared.ExtractTraceID(ctx)),
+		slog.String("trace_id", traceIDFromContext(ctx)),
 		slog.String("method", req.Spec().Procedure),
 		slog.String("public_code", appErr.PublicCode()),
 		slog.String("public_message", appErr.PublicMessage()),

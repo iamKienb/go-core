@@ -9,7 +9,6 @@ import (
 	"connectrpc.com/connect"
 	app_error "github.com/iamKienb/go-core/app_error"
 	authx "github.com/iamKienb/go-core/middleware/auth"
-	"github.com/iamKienb/go-core/middleware/shared"
 )
 
 func RecoveryInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
@@ -18,7 +17,7 @@ func RecoveryInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
 			defer func() {
 				if r := recover(); r != nil {
 					reqID := authx.GetRequestID(ctx)
-					traceID := shared.ExtractTraceID(ctx)
+					traceID := traceIDFromContext(ctx)
 
 					logger.ErrorContext(ctx, "CRITICAL_PANIC_RECOVERED",
 						slog.String("req_id", reqID),
