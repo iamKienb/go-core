@@ -89,6 +89,12 @@ type CircuitBreakerConfig struct {
 	ThresholdCnt uint32        `env:"_BREAKER_THRESHOLD_CNT"`
 }
 
+type TelemetryConfig struct {
+	JaegerEndpoint string `env:"_JAEGER_ENDPOINT"`
+	MetricsPath    string `env:"_METRICS_PATH"`
+	Enabled        bool   `env:"_TELEMETRY_ENABLED"`
+}
+
 type Server struct {
 	GrpcPort          int    `env:"_GRPC_PORT"`
 	ApiGatewayAddress string `env:"_API_GATEWAY_ADDRESS"`

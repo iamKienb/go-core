@@ -2,81 +2,117 @@ package observabilityx
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log/slog"
+	"runtime/debug"
+	"time"
 
 	"connectrpc.com/connect"
-	app_error "github.com/iamKienb/go-core/app_error"
-	authx "github.com/iamKienb/go-core/middleware/auth"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 )
 
-func ErrorResponseInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
-	return func(next connect.UnaryFunc) connect.UnaryFunc {
-		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			resp, err := next(ctx, req)
-			if err == nil {
-				return resp, nil
-			}
+func WithServerInterceptors() (connect.Option, error) {
+	meter := otel.GetMeterProvider().Meter("connect-server-metrics")
 
-			var connectErr *connect.Error
-			if errors.As(err, &connectErr) {
-				setResponseMeta(ctx, connectErr.Meta())
-				return nil, connectErr
-			}
-
-			appErr := app_error.From(err)
-			if logger != nil {
-				logErrorResponse(ctx, logger, req, appErr)
-			}
-
-			cErr := connect.NewError(appErr.Kind.ConnectCode(), errors.New(appErr.PublicMessage()))
-			cErr.Meta().Set("x-error-code", appErr.PublicCode())
-			cErr.Meta().Set("x-error-kind", appErr.Kind.ConnectCode().String())
-			setResponseMeta(ctx, cErr.Meta())
-			return nil, cErr
-		}
+	requestCounter, err := meter.Int64Counter("rpc_server_requests_total",
+		metric.WithDescription("Total RPC requests processed, partitioned by method and status"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request counter: %w", err)
 	}
-}
 
-type validator interface {
-	Validate() error
-}
+	latencyHistogram, err := meter.Float64Histogram("rpc_server_duration_milliseconds",
+		metric.WithDescription("RPC request processing latency in milliseconds"),
+		metric.WithUnit("ms"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create latency histogram: %w", err)
+	}
 
-func ValidationRequestInterceptor() connect.UnaryInterceptorFunc {
-	return func(next connect.UnaryFunc) connect.UnaryFunc {
-		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			if v, ok := req.Any().(validator); ok {
-				if err := v.Validate(); err != nil {
-					return nil, app_error.New(app_error.KindValidation, "request_invalid", err.Error(), err)
+	interceptor := connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (resp connect.AnyResponse, err error) {
+			ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(req.Header()))
+
+			tracer := otel.Tracer("connect-server")
+			apiMethod := req.Spec().Procedure
+
+			ctx, span := tracer.Start(ctx, apiMethod)
+
+			defer span.End()
+
+			defer func() {
+				if r := recover(); r != nil {
+					panicErr := fmt.Errorf("panic recovered: %v", r)
+					stackTrace := debug.Stack()
+
+					span.RecordError(panicErr)
+					span.SetStatus(codes.Error, panicErr.Error())
+
+					slog.ErrorContext(ctx, "CRITICAL_RPC_PANIC_DETECTED",
+						slog.String("method", apiMethod),
+						slog.Any("error", panicErr),
+						slog.String("stack", string(stackTrace)),
+					)
+
+					err = connect.NewError(connect.CodeInternal, fmt.Errorf("an internal server error occurred"))
 				}
+			}()
+
+			start := time.Now()
+			resp, err = next(ctx, req)
+			duration := time.Since(start)
+			ms := float64(duration) / float64(time.Millisecond)
+
+			statusLabel := "ok"
+
+			if err != nil {
+				statusLabel = "error"
+
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+
+				slog.ErrorContext(ctx, "rpc request failed",
+					slog.String("method", apiMethod),
+					slog.Duration("latency", duration),
+					slog.Any("error", err),
+				)
+
+				requestCounter.Add(ctx, 1, metric.WithAttributes(
+					attribute.String("method", apiMethod),
+					attribute.String("status", statusLabel),
+				))
+				latencyHistogram.Record(ctx, ms, metric.WithAttributes(
+					attribute.String("method", apiMethod),
+					attribute.String("status", statusLabel),
+				))
+
+				return resp, err
 			}
-			return next(ctx, req)
+
+			span.SetStatus(codes.Ok, "success")
+
+			slog.InfoContext(ctx, "rpc request completed",
+				slog.String("method", apiMethod),
+				slog.Duration("latency", duration),
+				slog.String("status", statusLabel),
+			)
+
+			requestCounter.Add(ctx, 1, metric.WithAttributes(
+				attribute.String("method", apiMethod),
+				attribute.String("status", statusLabel),
+			))
+			latencyHistogram.Record(ctx, ms, metric.WithAttributes(
+				attribute.String("method", apiMethod),
+				attribute.String("status", statusLabel),
+			))
+
+			return resp, nil
 		}
-	}
-}
+	})
 
-func logErrorResponse(ctx context.Context, logger *slog.Logger, req connect.AnyRequest, appErr *app_error.AppError) {
-	if logger == nil || appErr == nil {
-		return
-	}
-
-	level := slog.LevelWarn
-	if appErr.Kind == app_error.KindInternal || appErr.Kind == app_error.KindUnavailable {
-		level = slog.LevelError
-	}
-
-	attrs := []any{
-		slog.String("req_id", authx.GetRequestID(ctx)),
-		slog.String("trace_id", traceIDFromContext(ctx)),
-		slog.String("method", req.Spec().Procedure),
-		slog.String("public_code", appErr.PublicCode()),
-		slog.String("public_message", appErr.PublicMessage()),
-		slog.String("connect_code", appErr.Kind.ConnectCode().String()),
-	}
-
-	if appErr.Err != nil {
-		attrs = append(attrs, slog.String("cause", appErr.Err.Error()))
-	}
-
-	logger.Log(ctx, level, "request failed", attrs...)
+	return connect.WithInterceptors(interceptor), nil
 }

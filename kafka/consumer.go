@@ -10,6 +10,7 @@ import (
 	"time"
 
 	configx "github.com/iamKienb/go-core/config"
+	"github.com/iamKienb/go-core/shared"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -89,6 +90,17 @@ func (c *Consumer) consumeOne(ctx context.Context) error {
 	kmsg, err := c.reader.FetchMessage(ctx)
 	if err != nil {
 		return fmt.Errorf("kafka fetch failed: %w", err)
+	}
+
+	var traceID string
+	for _, header := range kmsg.Headers {
+		if header.Key == "x-trace-id" {
+			traceID = string(header.Value)
+			break
+		}
+	}
+	if traceID != "" {
+		ctx = shared.SetTraceIDToCtx(ctx, traceID)
 	}
 
 	msg := fromKafkaMessage(kmsg.Topic, kmsg)

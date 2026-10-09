@@ -1,4 +1,4 @@
-package observabilityx
+package observability_v1
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	app_error "github.com/iamKienb/go-core/app_error"
-	authx "github.com/iamKienb/go-core/middleware/auth"
+	"github.com/iamKienb/go-core/shared"
 )
 
 func RecoveryInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
@@ -16,7 +16,7 @@ func RecoveryInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (_ connect.AnyResponse, err error) {
 			defer func() {
 				if r := recover(); r != nil {
-					reqID := authx.GetRequestID(ctx)
+					reqID := shared.GetRequestID(ctx)
 					traceID := traceIDFromContext(ctx)
 
 					logger.ErrorContext(ctx, "CRITICAL_PANIC_RECOVERED",

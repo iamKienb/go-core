@@ -3,44 +3,43 @@ package observabilityx
 import (
 	"context"
 	"log/slog"
-	"time"
-
-	"connectrpc.com/connect"
-	authx "github.com/iamKienb/go-core/middleware/auth"
+	"os"
 )
 
-func LoggingInterceptor(logger *slog.Logger) connect.UnaryInterceptorFunc {
-	return func(next connect.UnaryFunc) connect.UnaryFunc {
-		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			start := time.Now()
+type OtelHandler struct {
+	next slog.Handler
+}
 
-			resp, err := next(ctx, req)
+func (h *OtelHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.next.Enabled(ctx, level)
+}
 
-			duration := time.Since(start)
-			if err != nil {
-				return resp, err
-			}
+func (h *OtelHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &OtelHandler{h.next.WithAttrs(attrs)}
+}
 
-			if duration < 500*time.Millisecond {
-				logger.DebugContext(ctx, "request completed",
-					slog.String("req_id", authx.GetRequestID(ctx)),
-					slog.String("trace_id", traceIDFromContext(ctx)),
-					slog.String("method", req.Spec().Procedure),
-					slog.Duration("latency", duration),
-				)
-				return resp, nil
-			}
+func (h *OtelHandler) WithGroup(name string) slog.Handler {
+	return &OtelHandler{h.next.WithGroup(name)}
+}
 
-			logger.WarnContext(ctx, "slow request",
-				slog.String("req_id", authx.GetRequestID(ctx)),
-				slog.String("trace_id", traceIDFromContext(ctx)),
-				slog.String("method", req.Spec().Procedure),
-				slog.String("status", "ok"),
-				slog.Duration("latency", duration),
-				slog.String("ip", req.Peer().Addr),
-			)
-
-			return resp, err
-		}
+func (h *OtelHandler) Handle(ctx context.Context, record slog.Record) error {
+	traceID := GetTraceIDFromContext(ctx)
+	if traceID != "" {
+		record.AddAttrs(slog.String("trace_id", traceID))
 	}
+	return h.next.Handle(ctx, record)
+}
+
+func InitLogger() {
+	baseHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelInfo,
+	})
+
+	otelHandler := &OtelHandler{
+		next: baseHandler,
+	}
+
+	logger := slog.New(otelHandler)
+	slog.SetDefault(logger)
 }

@@ -1,4 +1,4 @@
-package authx
+package auth_v1
 
 import (
 	"context"
@@ -6,29 +6,28 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"github.com/iamKienb/go-core/middleware/shared"
+	"github.com/iamKienb/go-core/shared"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func RequestContextInterceptor() connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			reqID := strings.TrimSpace(req.Header().Get(HeaderRequestID))
-			if reqID == "" {
-				reqID = "req-" + uuid.NewString()
+			traceID := strings.TrimSpace(req.Header().Get(HeaderTraceID))
+
+			if traceID == "" {
+				spanContext := trace.SpanContextFromContext(ctx)
+				if spanContext.IsValid() {
+					traceID = spanContext.TraceID().String()
+				}
 			}
 
-			traceID := strings.TrimSpace(req.Header().Get(HeaderTraceID))
-			if traceID == "" {
-				traceID = shared.ExtractTraceID(ctx)
-			}
 			if traceID == "" {
 				traceID = strings.ReplaceAll(uuid.NewString(), "-", "")
 			}
 
-			req.Header().Set(HeaderRequestID, reqID)
 			req.Header().Set(HeaderTraceID, traceID)
-			ctx = SetRequestIDToCtx(ctx, reqID)
-			ctx = SetTraceIDToCtx(ctx, traceID)
+			ctx = shared.SetTraceIDToCtx(ctx, traceID)
 
 			return next(ctx, req)
 		}

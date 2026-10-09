@@ -1,12 +1,17 @@
 package observabilityx
 
 import (
-	"connectrpc.com/connect"
-	"connectrpc.com/otelconnect"
+	"context"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
-func TracingInterceptor() (connect.Interceptor, error) {
-	return otelconnect.NewInterceptor(
-		otelconnect.WithTrustRemote(),
-	)
+func GetTraceIDFromContext(ctx context.Context) string {
+	spanContext := trace.SpanContextFromContext(ctx)
+
+	if spanContext.IsValid() {
+		return spanContext.TraceID().String()
+	}
+
+	return ""
 }

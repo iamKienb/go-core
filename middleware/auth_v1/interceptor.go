@@ -1,4 +1,4 @@
-package authx
+package auth_v1
 
 import (
 	"context"
