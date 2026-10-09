@@ -52,3 +52,7 @@ func GetUserInfoFromCtx(ctx context.Context) *jwtx.Claims {
 	}
 	return nil
 }
+
+func SetUserInfoToCtx(ctx context.Context, claims *jwtx.Claims) context.Context {
+	return context.WithValue(ctx, userContextKey, claims)
+}
