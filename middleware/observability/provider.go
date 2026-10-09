@@ -12,7 +12,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
-func InitTracerProvider(ctx context.Context, serviceName, jaegerEndpoint string) (*sdktrace.TracerProvider, error) {
+func InitTracerProvider(ctx context.Context, serviceName, jaegerEndpoint string) (func(context.Context) error, error) {
 
 	exporter, err := otlptracegrpc.New(ctx,
 		otlptracegrpc.WithEndpoint(jaegerEndpoint),
@@ -36,11 +36,10 @@ func InitTracerProvider(ctx context.Context, serviceName, jaegerEndpoint string)
 	)
 
 	otel.SetTracerProvider(tp)
-
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
 		propagation.Baggage{},
 	))
 
-	return tp, nil
+	return tp.Shutdown, nil
 }
