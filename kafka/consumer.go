@@ -10,19 +10,40 @@ import (
 	"time"
 
 	configx "github.com/iamKienb/go-core/config"
-	"github.com/iamKienb/go-core/shared"
 	"github.com/segmentio/kafka-go"
+	"go.opentelemetry.io/otel"
 )
+
+type KafkaHeadersCarrier []kafka.Header
+
+func (k KafkaHeadersCarrier) Get(key string) string {
+	for _, h := range k {
+		if strings.EqualFold(h.Key, key) {
+			return string(h.Value)
+		}
+	}
+	return ""
+}
+
+func (k KafkaHeadersCarrier) Set(key, value string) {
+}
+
+func (k KafkaHeadersCarrier) Keys() []string {
+	keys := make([]string, 0, len(k))
+	for _, h := range k {
+		keys = append(keys, h.Key)
+	}
+	return keys
+}
 
 type Consumer struct {
 	reader      *kafka.Reader
 	handler     ConsumerHandler
 	dlqProducer *Producer
 	cfg         configx.ConsumerConfig
-	logger      *slog.Logger
 }
 
-func NewConsumer(service KafkaXService, cfg configx.ConsumerConfig, logger *slog.Logger, handler ConsumerHandler) (*Consumer, error) {
+func NewConsumer(service KafkaXService, cfg configx.ConsumerConfig, handler ConsumerHandler) (*Consumer, error) {
 	if service == nil || handler == nil {
 		return nil, errors.New("kafka consumer: client service and handler must not be nil")
 	}
@@ -64,12 +85,11 @@ func NewConsumer(service KafkaXService, cfg configx.ConsumerConfig, logger *slog
 		handler:     handler,
 		dlqProducer: dlqProducer,
 		cfg:         cfg,
-		logger:      logger,
 	}, nil
 }
 
 func (c *Consumer) Start(ctx context.Context) error {
-	c.logInfo(ctx, "kafka consumer starting")
+	slog.InfoContext(ctx, "kafka consumer starting", slog.String("group_id", c.cfg.GroupID))
 	for {
 		if ctx.Err() != nil {
 			return nil
@@ -80,7 +100,7 @@ func (c *Consumer) Start(ctx context.Context) error {
 				return nil
 			}
 
-			c.logError(ctx, "kafka consume failed", slog.String("error", err.Error()))
+			slog.ErrorContext(ctx, "kafka consume failed", slog.String("error", err.Error()))
 			time.Sleep(c.cfg.RetryBackoff)
 		}
 	}
@@ -92,16 +112,7 @@ func (c *Consumer) consumeOne(ctx context.Context) error {
 		return fmt.Errorf("kafka fetch failed: %w", err)
 	}
 
-	var traceID string
-	for _, header := range kmsg.Headers {
-		if header.Key == "x-trace-id" {
-			traceID = string(header.Value)
-			break
-		}
-	}
-	if traceID != "" {
-		ctx = shared.SetTraceIDToCtx(ctx, traceID)
-	}
+	ctx = otel.GetTextMapPropagator().Extract(ctx, KafkaHeadersCarrier(kmsg.Headers))
 
 	msg := fromKafkaMessage(kmsg.Topic, kmsg)
 
@@ -133,7 +144,7 @@ func (c *Consumer) handleWithRetry(ctx context.Context, msg Message) error {
 		msg.SetHeader(HeaderRetryCount, strconv.Itoa(attempt-1))
 		if err := c.handler.Handle(ctx, msg); err != nil {
 			lastErr = err
-			c.logWarn(ctx, "kafka handler attempt failed",
+			slog.WarnContext(ctx, "kafka handler attempt failed",
 				slog.String("topic", msg.Topic),
 				slog.String("group_id", c.cfg.GroupID),
 				slog.Int("attempt", attempt),
@@ -175,22 +186,4 @@ func (c *Consumer) Close() error {
 		}
 	}
 	return result
-}
-
-func (c *Consumer) logInfo(ctx context.Context, msg string, args ...any) {
-	if c.logger != nil {
-		c.logger.InfoContext(ctx, msg, args...)
-	}
-}
-
-func (c *Consumer) logWarn(ctx context.Context, message string, attrs ...any) {
-	if c.logger != nil {
-		c.logger.WarnContext(ctx, message, attrs...)
-	}
-}
-
-func (c *Consumer) logError(ctx context.Context, message string, attrs ...any) {
-	if c.logger != nil {
-		c.logger.ErrorContext(ctx, message, attrs...)
-	}
 }
