@@ -96,7 +96,7 @@ type TelemetryConfig struct {
 }
 
 type Server struct {
-	Name              int    `env:"_NAME"`
+	Name              string `env:"_NAME"`
 	GrpcPort          int    `env:"_GRPC_PORT"`
 	ApiGatewayAddress string `env:"_API_GATEWAY_ADDRESS"`
 }
