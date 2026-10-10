@@ -6,6 +6,7 @@ import (
 	"time"
 
 	configx "github.com/iamKienb/go-core/config"
+	redisotel "github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -13,7 +14,7 @@ type RedisX struct {
 	client *redis.Client
 }
 
-func New(cfg configx.RedisConfig) (RedisXService, error) {
+func New(ctx context.Context, cfg configx.RedisConfig) (RedisXService, error) {
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
 	rdb := redis.NewClient(&redis.Options{
@@ -25,10 +26,19 @@ func New(cfg configx.RedisConfig) (RedisXService, error) {
 		MinIdleConns: 10,
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if err := redisotel.InstrumentTracing(rdb); err != nil {
+		rdb.Close()
+		return nil, fmt.Errorf("redis tracing instrument failed: %w", err)
+	}
+	if err := redisotel.InstrumentMetrics(rdb); err != nil {
+		rdb.Close()
+		return nil, fmt.Errorf("redis metrics instrument failed: %w", err)
+	}
+
+	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	if err := rdb.Ping(ctx).Err(); err != nil {
+	if err := rdb.Ping(pingCtx).Err(); err != nil {
 		return nil, fmt.Errorf("redis ping failed: %w", err)
 	}
 

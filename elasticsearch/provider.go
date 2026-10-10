@@ -12,9 +12,10 @@ type ESX struct {
 	client *elasticsearch.TypedClient
 }
 
-func New(cfg configx.ElasticSearchConfig) (ESXService, error) {
+func New(ctx context.Context, cfg configx.ElasticSearchConfig) (ESXService, error) {
 	esCfg := elasticsearch.Config{
-		Addresses: cfg.Addresses,
+		Addresses:       cfg.Addresses,
+		Instrumentation: elasticsearch.NewOpenTelemetryInstrumentation(nil, false),
 	}
 
 	client, err := elasticsearch.NewTypedClient(esCfg)
@@ -22,7 +23,7 @@ func New(cfg configx.ElasticSearchConfig) (ESXService, error) {
 		return nil, fmt.Errorf("create elasticsearch client: %w", err)
 	}
 
-	_, err = client.Info().Do(context.Background())
+	_, err = client.Info().Do(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("connect to elasticsearch: %w", err)
 	}
