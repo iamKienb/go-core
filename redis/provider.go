@@ -39,6 +39,7 @@ func New(ctx context.Context, cfg configx.RedisConfig) (RedisXService, error) {
 	defer cancel()
 
 	if err := rdb.Ping(pingCtx).Err(); err != nil {
+		rdb.Close()
 		return nil, fmt.Errorf("redis ping failed: %w", err)
 	}
 

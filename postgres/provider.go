@@ -7,6 +7,7 @@ import (
 
 	"github.com/exaring/otelpgx"
 	configx "github.com/iamKienb/go-core/config"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -30,6 +31,7 @@ func New(ctx context.Context, cfg configx.PostgresConfig) (PGXService, error) {
 	config.MaxConnLifetime = cfg.ConnMaxLifetime
 	config.MaxConnIdleTime = 30 * time.Minute
 	config.HealthCheckPeriod = 1 * time.Minute
+	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
 	config.ConnConfig.Tracer = otelpgx.NewTracer()
 
