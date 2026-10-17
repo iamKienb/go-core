@@ -38,12 +38,12 @@ func (k KafkaHeadersCarrier) Keys() []string {
 
 type Consumer struct {
 	reader      *kafka.Reader
-	handler     ConsumerHandler
+	handler     WorkerHandler
 	dlqProducer *Producer
 	cfg         configx.ConsumerConfig
 }
 
-func NewConsumer(service KafkaXService, cfg configx.ConsumerConfig, handler ConsumerHandler) (*Consumer, error) {
+func NewConsumer(service KafkaXService, cfg configx.ConsumerConfig, handler WorkerHandler) (*Consumer, error) {
 	if service == nil || handler == nil {
 		return nil, errors.New("kafka consumer: client service and handler must not be nil")
 	}

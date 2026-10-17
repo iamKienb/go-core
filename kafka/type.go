@@ -20,12 +20,6 @@ type ProducerPublisher interface {
 	PublishBatch(ctx context.Context, messages []Message) error
 }
 
-type ConsumerHandler interface {
+type WorkerHandler interface {
 	Handle(ctx context.Context, msg Message) error
-}
-
-type ConsumerHandlerFunc func(ctx context.Context, msg Message) error
-
-func (f ConsumerHandlerFunc) Handle(ctx context.Context, msg Message) error {
-	return f(ctx, msg)
 }
