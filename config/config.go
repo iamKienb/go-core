@@ -96,6 +96,10 @@ type TelemetryConfig struct {
 	Enabled        bool   `env:"_TELEMETRY_ENABLED"`
 }
 
+type LokiConfig struct {
+	LokiURL string `env:"_LOKI_URL"`
+}
+
 type Server struct {
 	Name              string `env:"_NAME"`
 	GrpcPort          int    `env:"_GRPC_PORT"`
