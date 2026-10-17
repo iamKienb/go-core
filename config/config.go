@@ -92,7 +92,7 @@ type CircuitBreakerConfig struct {
 type TelemetryConfig struct {
 	JaegerEndpoint string `env:"_JAEGER_ENDPOINT"`
 	MetricsPath    string `env:"_METRICS_PATH"`
-	MetricsPort    string `env:"METRICS_PORT"`
+	MetricsPort    int    `env:"METRICS_PORT"`
 	Enabled        bool   `env:"_TELEMETRY_ENABLED"`
 }
 
