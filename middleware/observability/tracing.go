@@ -3,14 +3,17 @@ package observabilityx
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 func GetTraceIDFromContext(ctx context.Context) string {
-	spanContext := trace.SpanContextFromContext(ctx)
+	carrier := propagation.MapCarrier{}
 
-	if spanContext.IsValid() {
-		return spanContext.TraceID().String()
+	otel.GetTextMapPropagator().Inject(ctx, carrier)
+
+	if val, ok := carrier["traceparent"]; ok {
+		return val
 	}
 
 	return ""
