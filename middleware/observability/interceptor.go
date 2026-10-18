@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func WithServerInterceptors() (connect.Option, error) {
@@ -139,7 +140,13 @@ func WithWorkerInterceptors(next kafkax.WorkerHandler) (kafkax.WorkerHandler, er
 	interceptor := WorkerHandlerFunc(func(ctx context.Context, msg kafkax.Message) error {
 		topic := msg.Topic
 		tracer := otel.Tracer("kafka-worker")
-		ctx, span := tracer.Start(ctx, fmt.Sprintf("kafka.consume.%s", topic))
+
+		spanContext := trace.SpanContextFromContext(ctx)
+		ctx, span := tracer.Start(
+			trace.ContextWithRemoteSpanContext(ctx, spanContext),
+			fmt.Sprintf("kafka.consume.%s", topic),
+			trace.WithSpanKind(trace.SpanKindConsumer),
+		)
 		defer span.End()
 
 		var handlerErr error
