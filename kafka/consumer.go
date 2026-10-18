@@ -26,6 +26,12 @@ func (k KafkaHeadersCarrier) Get(key string) string {
 }
 
 func (k KafkaHeadersCarrier) Set(key, value string) {
+	for i, h := range k {
+		if strings.EqualFold(h.Key, key) {
+			k[i].Value = []byte(value)
+			return
+		}
+	}
 }
 
 func (k KafkaHeadersCarrier) Keys() []string {
@@ -124,7 +130,6 @@ func (c *Consumer) consumeOne(ctx context.Context) error {
 		} else {
 			return fmt.Errorf("handler failed and no DLQ configured: %w", err)
 		}
-
 	}
 
 	if err := c.reader.CommitMessages(ctx, kmsg); err != nil {

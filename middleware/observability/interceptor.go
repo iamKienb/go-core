@@ -14,11 +14,11 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 )
 
-func WithServerInterceptors() (connect.Option, error) {
-	meter := otel.GetMeterProvider().Meter("connect-server-metrics")
+func WithServerInterceptors(serviceName string) (connect.Option, error) {
+	meterName := fmt.Sprintf("%s.connect-server", serviceName)
+	meter := otel.GetMeterProvider().Meter(meterName)
 
 	requestCounter, err := meter.Int64Counter("rpc_server_requests_total",
 		metric.WithDescription("Total RPC requests processed, partitioned by method and status"),
@@ -39,15 +39,21 @@ func WithServerInterceptors() (connect.Option, error) {
 		return func(ctx context.Context, req connect.AnyRequest) (resp connect.AnyResponse, err error) {
 			ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(req.Header()))
 
-			tracer := otel.Tracer("connect-server")
+			tracer := otel.Tracer(serviceName)
 			apiMethod := req.Spec().Procedure
 
 			ctx, span := tracer.Start(ctx, apiMethod)
-
 			defer span.End()
 
+			start := time.Now()
+
 			defer func() {
+				duration := time.Since(start)
+				ms := float64(duration) / float64(time.Millisecond)
+				statusLabel := "ok"
+
 				if r := recover(); r != nil {
+					statusLabel = "panic"
 					panicErr := fmt.Errorf("rpc panic recovered: %v", r)
 					stackTrace := debug.Stack()
 
@@ -61,27 +67,26 @@ func WithServerInterceptors() (connect.Option, error) {
 					)
 
 					err = connect.NewError(connect.CodeInternal, fmt.Errorf("an internal server error occurred"))
+				} else if err != nil {
+					statusLabel = "error"
+
+					span.RecordError(err)
+					span.SetStatus(codes.Error, err.Error())
+
+					slog.ErrorContext(ctx, "rpc request failed",
+						slog.String("method", apiMethod),
+						slog.Duration("latency", duration),
+						slog.Any("error", err),
+					)
+				} else {
+					span.SetStatus(codes.Ok, "success")
+
+					slog.InfoContext(ctx, "rpc request completed",
+						slog.String("method", apiMethod),
+						slog.Duration("latency", duration),
+						slog.String("status", statusLabel),
+					)
 				}
-			}()
-
-			start := time.Now()
-			resp, err = next(ctx, req)
-			duration := time.Since(start)
-			ms := float64(duration) / float64(time.Millisecond)
-
-			statusLabel := "ok"
-
-			if err != nil {
-				statusLabel = "error"
-
-				span.RecordError(err)
-				span.SetStatus(codes.Error, err.Error())
-
-				slog.ErrorContext(ctx, "rpc request failed",
-					slog.String("method", apiMethod),
-					slog.Duration("latency", duration),
-					slog.Any("error", err),
-				)
 
 				requestCounter.Add(ctx, 1, metric.WithAttributes(
 					attribute.String("method", apiMethod),
@@ -91,36 +96,19 @@ func WithServerInterceptors() (connect.Option, error) {
 					attribute.String("method", apiMethod),
 					attribute.String("status", statusLabel),
 				))
+			}()
 
-				return resp, err
-			}
-
-			span.SetStatus(codes.Ok, "success")
-
-			slog.InfoContext(ctx, "rpc request completed",
-				slog.String("method", apiMethod),
-				slog.Duration("latency", duration),
-				slog.String("status", statusLabel),
-			)
-
-			requestCounter.Add(ctx, 1, metric.WithAttributes(
-				attribute.String("method", apiMethod),
-				attribute.String("status", statusLabel),
-			))
-			latencyHistogram.Record(ctx, ms, metric.WithAttributes(
-				attribute.String("method", apiMethod),
-				attribute.String("status", statusLabel),
-			))
-
-			return resp, nil
+			resp, err = next(ctx, req)
+			return resp, err
 		}
 	})
 
 	return connect.WithInterceptors(interceptor), nil
 }
 
-func WithWorkerInterceptors(next kafkax.WorkerHandler) (kafkax.WorkerHandler, error) {
-	meter := otel.GetMeterProvider().Meter("kafka-worker-metrics")
+func WithWorkerInterceptors(serviceName string, next kafkax.WorkerHandler) (kafkax.WorkerHandler, error) {
+	meterName := fmt.Sprintf("%s.kafka-worker", serviceName)
+	meter := otel.GetMeterProvider().Meter(meterName)
 
 	requestCounter, err := meter.Int64Counter("kafka_worker_messages_total",
 		metric.WithDescription("Total Kafka messages processed by worker, partitioned by topic and status"),
@@ -139,20 +127,21 @@ func WithWorkerInterceptors(next kafkax.WorkerHandler) (kafkax.WorkerHandler, er
 
 	interceptor := WorkerHandlerFunc(func(ctx context.Context, msg kafkax.Message) error {
 		topic := msg.Topic
-		tracer := otel.Tracer("kafka-worker")
+		tracer := otel.Tracer(serviceName)
 
-		spanContext := trace.SpanContextFromContext(ctx)
-		ctx, span := tracer.Start(
-			trace.ContextWithRemoteSpanContext(ctx, spanContext),
-			fmt.Sprintf("kafka.consume.%s", topic),
-			trace.WithSpanKind(trace.SpanKindConsumer),
-		)
+		ctx, span := tracer.Start(ctx, fmt.Sprintf("kafka.process.%s", topic))
 		defer span.End()
 
+		start := time.Now()
 		var handlerErr error
 
 		defer func() {
+			duration := time.Since(start)
+			ms := float64(duration) / float64(time.Millisecond)
+			statusLabel := "ok"
+
 			if r := recover(); r != nil {
+				statusLabel = "panic"
 				panicErr := fmt.Errorf("worker panic recovered: %v", r)
 				stackTrace := debug.Stack()
 
@@ -166,32 +155,26 @@ func WithWorkerInterceptors(next kafkax.WorkerHandler) (kafkax.WorkerHandler, er
 				)
 
 				handlerErr = panicErr
+			} else if handlerErr != nil {
+				statusLabel = "error"
 
-				requestCounter.Add(ctx, 1, metric.WithAttributes(
-					attribute.String("topic", topic),
-					attribute.String("status", "panic"),
-				))
+				span.RecordError(handlerErr)
+				span.SetStatus(codes.Error, handlerErr.Error())
+
+				slog.ErrorContext(ctx, "kafka worker message processing failed",
+					slog.String("topic", topic),
+					slog.Duration("latency", duration),
+					slog.Any("error", handlerErr),
+				)
+			} else {
+				span.SetStatus(codes.Ok, "success")
+
+				slog.InfoContext(ctx, "kafka worker message processing completed",
+					slog.String("topic", topic),
+					slog.Duration("latency", duration),
+					slog.String("status", statusLabel),
+				)
 			}
-		}()
-
-		start := time.Now()
-		handlerErr = next.Handle(ctx, msg)
-		duration := time.Since(start)
-		ms := float64(duration) / float64(time.Millisecond)
-
-		statusLabel := "ok"
-
-		if handlerErr != nil {
-			statusLabel = "error"
-
-			span.RecordError(handlerErr)
-			span.SetStatus(codes.Error, handlerErr.Error())
-
-			slog.ErrorContext(ctx, "kafka worker message processing failed",
-				slog.String("topic", topic),
-				slog.Duration("latency", duration),
-				slog.Any("error", handlerErr),
-			)
 
 			requestCounter.Add(ctx, 1, metric.WithAttributes(
 				attribute.String("topic", topic),
@@ -201,28 +184,10 @@ func WithWorkerInterceptors(next kafkax.WorkerHandler) (kafkax.WorkerHandler, er
 				attribute.String("topic", topic),
 				attribute.String("status", statusLabel),
 			))
+		}()
 
-			return handlerErr
-		}
-
-		span.SetStatus(codes.Ok, "success")
-
-		slog.InfoContext(ctx, "kafka worker message processing completed",
-			slog.String("topic", topic),
-			slog.Duration("latency", duration),
-			slog.String("status", statusLabel),
-		)
-
-		requestCounter.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("topic", topic),
-			attribute.String("status", statusLabel),
-		))
-		latencyHistogram.Record(ctx, ms, metric.WithAttributes(
-			attribute.String("topic", topic),
-			attribute.String("status", statusLabel),
-		))
-
-		return nil
+		handlerErr = next.Handle(ctx, msg)
+		return handlerErr
 	})
 
 	return interceptor, nil
