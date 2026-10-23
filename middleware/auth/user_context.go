@@ -17,7 +17,7 @@ const (
 
 type contextKey string
 
-const userContextKey contextKey = "user_info_ctx_key"
+const UserContextKey contextKey = "user_info_ctx_key"
 
 func ExtractUserContextInterceptor() connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
@@ -38,7 +38,7 @@ func ExtractUserContextInterceptor() connect.UnaryInterceptorFunc {
 					FullName: fullName,
 					Roles:    roles,
 				}
-				ctx = context.WithValue(ctx, userContextKey, claims)
+				ctx = context.WithValue(ctx, UserContextKey, claims)
 			}
 
 			return next(ctx, req)
@@ -47,12 +47,12 @@ func ExtractUserContextInterceptor() connect.UnaryInterceptorFunc {
 }
 
 func GetUserInfoFromCtx(ctx context.Context) *jwtx.Claims {
-	if claims, ok := ctx.Value(userContextKey).(*jwtx.Claims); ok {
+	if claims, ok := ctx.Value(UserContextKey).(*jwtx.Claims); ok {
 		return claims
 	}
 	return nil
 }
 
 func SetUserInfoToCtx(ctx context.Context, claims *jwtx.Claims) context.Context {
-	return context.WithValue(ctx, userContextKey, claims)
+	return context.WithValue(ctx, UserContextKey, claims)
 }

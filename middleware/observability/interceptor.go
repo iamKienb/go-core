@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
+	jwtx "github.com/iamKienb/go-core/jwt"
 	kafkax "github.com/iamKienb/go-core/kafka"
+	authx "github.com/iamKienb/go-core/middleware/auth"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -39,6 +42,25 @@ func WithServerInterceptors(serviceName string) (connect.Option, error) {
 		return func(ctx context.Context, req connect.AnyRequest) (resp connect.AnyResponse, err error) {
 			ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(req.Header()))
 
+			userID := req.Header().Get(authx.HeaderUserID)
+			email := req.Header().Get(authx.HeaderUserEmail)
+			fullName := req.Header().Get(authx.HeaderUserName)
+
+			var roles []string
+			if rawRoles := req.Header().Get(authx.HeaderUserRole); rawRoles != "" {
+				roles = strings.Split(rawRoles, ",")
+			}
+
+			if userID != "" || email != "" || len(roles) > 0 {
+				claims := &jwtx.Claims{
+					UserID:   userID,
+					Email:    email,
+					FullName: fullName,
+					Roles:    roles,
+				}
+				ctx = context.WithValue(ctx, authx.UserContextKey, claims)
+			}
+
 			tracer := otel.Tracer(serviceName)
 			apiMethod := req.Spec().Procedure
 
@@ -52,6 +74,13 @@ func WithServerInterceptors(serviceName string) (connect.Option, error) {
 				ms := float64(duration) / float64(time.Millisecond)
 				statusLabel := "ok"
 
+				var logArgs = []any{
+					slog.String("method", apiMethod),
+				}
+				if userID != "" {
+					logArgs = append(logArgs, slog.String("user_id", userID))
+				}
+
 				if r := recover(); r != nil {
 					statusLabel = "panic"
 					panicErr := fmt.Errorf("rpc panic recovered: %v", r)
@@ -60,11 +89,8 @@ func WithServerInterceptors(serviceName string) (connect.Option, error) {
 					span.RecordError(panicErr)
 					span.SetStatus(codes.Error, panicErr.Error())
 
-					slog.ErrorContext(ctx, "CRITICAL_RPC_PANIC_DETECTED",
-						slog.String("method", apiMethod),
-						slog.Any("error", panicErr),
-						slog.String("stack", string(stackTrace)),
-					)
+					panicArgs := append(logArgs, slog.Any("error", panicErr), slog.String("stack", string(stackTrace)))
+					slog.ErrorContext(ctx, "CRITICAL_RPC_PANIC_DETECTED", panicArgs...)
 
 					err = connect.NewError(connect.CodeInternal, fmt.Errorf("an internal server error occurred"))
 				} else if err != nil {
@@ -73,19 +99,13 @@ func WithServerInterceptors(serviceName string) (connect.Option, error) {
 					span.RecordError(err)
 					span.SetStatus(codes.Error, err.Error())
 
-					slog.ErrorContext(ctx, "rpc request failed",
-						slog.String("method", apiMethod),
-						slog.Duration("latency", duration),
-						slog.Any("error", err),
-					)
+					errArgs := append(logArgs, slog.Duration("latency", duration), slog.Any("error", err))
+					slog.ErrorContext(ctx, "rpc request failed", errArgs...)
 				} else {
 					span.SetStatus(codes.Ok, "success")
 
-					slog.InfoContext(ctx, "rpc request completed",
-						slog.String("method", apiMethod),
-						slog.Duration("latency", duration),
-						slog.String("status", statusLabel),
-					)
+					infoArgs := append(logArgs, slog.Duration("latency", duration), slog.String("status", statusLabel))
+					slog.InfoContext(ctx, "rpc request completed", infoArgs...)
 				}
 
 				requestCounter.Add(ctx, 1, metric.WithAttributes(
@@ -127,10 +147,25 @@ func WithWorkerInterceptors(serviceName string, next kafkax.WorkerHandler) (kafk
 
 	interceptor := WorkerHandlerFunc(func(ctx context.Context, msg kafkax.Message) error {
 		topic := msg.Topic
+
+		var idempotencyKey, outboxID string
+		if msg.Headers != nil {
+			idempotencyKey = msg.Headers["x-idempotency-key"]
+			outboxID = msg.Headers["id"]
+		}
+
 		tracer := otel.Tracer(serviceName)
 
 		ctx, span := tracer.Start(ctx, fmt.Sprintf("kafka.process.%s", topic))
 		defer span.End()
+
+		span.SetAttributes(attribute.String("messaging.kafka.topic", topic))
+		if idempotencyKey != "" {
+			span.SetAttributes(attribute.String("messaging.kafka.idempotency_key", idempotencyKey))
+		}
+		if outboxID != "" {
+			span.SetAttributes(attribute.String("messaging.kafka.outbox_id", outboxID))
+		}
 
 		start := time.Now()
 		var handlerErr error
@@ -140,6 +175,16 @@ func WithWorkerInterceptors(serviceName string, next kafkax.WorkerHandler) (kafk
 			ms := float64(duration) / float64(time.Millisecond)
 			statusLabel := "ok"
 
+			var logArgs = []any{
+				slog.String("topic", topic),
+			}
+			if idempotencyKey != "" {
+				logArgs = append(logArgs, slog.String("idempotency_key", idempotencyKey))
+			}
+			if outboxID != "" {
+				logArgs = append(logArgs, slog.String("outbox_id", outboxID))
+			}
+
 			if r := recover(); r != nil {
 				statusLabel = "panic"
 				panicErr := fmt.Errorf("worker panic recovered: %v", r)
@@ -148,11 +193,8 @@ func WithWorkerInterceptors(serviceName string, next kafkax.WorkerHandler) (kafk
 				span.RecordError(panicErr)
 				span.SetStatus(codes.Error, panicErr.Error())
 
-				slog.ErrorContext(ctx, "CRITICAL_WORKER_PANIC_DETECTED",
-					slog.String("topic", topic),
-					slog.Any("error", panicErr),
-					slog.String("stack", string(stackTrace)),
-				)
+				panicArgs := append(logArgs, slog.Any("error", panicErr), slog.String("stack", string(stackTrace)))
+				slog.ErrorContext(ctx, "CRITICAL_WORKER_PANIC_DETECTED", panicArgs...)
 
 				handlerErr = panicErr
 			} else if handlerErr != nil {
@@ -161,19 +203,12 @@ func WithWorkerInterceptors(serviceName string, next kafkax.WorkerHandler) (kafk
 				span.RecordError(handlerErr)
 				span.SetStatus(codes.Error, handlerErr.Error())
 
-				slog.ErrorContext(ctx, "kafka worker message processing failed",
-					slog.String("topic", topic),
-					slog.Duration("latency", duration),
-					slog.Any("error", handlerErr),
-				)
+				errArgs := append(logArgs, slog.Duration("latency", duration), slog.Any("error", handlerErr))
+				slog.ErrorContext(ctx, "kafka worker message processing failed", errArgs...)
 			} else {
 				span.SetStatus(codes.Ok, "success")
-
-				slog.InfoContext(ctx, "kafka worker message processing completed",
-					slog.String("topic", topic),
-					slog.Duration("latency", duration),
-					slog.String("status", statusLabel),
-				)
+				infoArgs := append(logArgs, slog.Duration("latency", duration), slog.String("status", statusLabel))
+				slog.InfoContext(ctx, "kafka worker message processing completed", infoArgs...)
 			}
 
 			requestCounter.Add(ctx, 1, metric.WithAttributes(
